@@ -178,6 +178,8 @@ final class UsageIslandModel {
     var dayToken = 0
     /// 当前屏幕的顶部几何（刘海宽度、菜单栏高度）。
     var geometry = UsageIslandGeometry()
+    /// 窗口画布尺寸：平时等于岛形尺寸；展开 / 收起过渡中取前后两者的并集。岛形在画布里顶部居中。
+    var canvasSize: CGSize = .zero
 
     var currentNotice: CodexTurnRecord? { queue.first }
 

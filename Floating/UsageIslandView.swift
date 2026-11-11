@@ -6,7 +6,8 @@ import SwiftUI
 // - 收起：刘海左侧「今日 $…」，右侧「…M」；无刘海屏幕在菜单栏正中显示同样的黑色岛形，中间用「·」分隔；
 // - 回合提示：左侧换成「对话名」，右侧换成「+$… · +…M」，约 4 秒后收回；
 // - 展开（悬停）：从岛形向下展开今日明细与最近回合。
-// 左右两翼等宽，刘海始终落在正中。始终用深色外观；不使用常驻动画。
+// 左右两翼等宽，刘海始终落在正中。始终用深色外观。
+// 展开 / 收起用弹簧曲线过渡（控制器里 `withAnimation`），岛形尺寸与底角一起变化；没有常驻动画。
 
 struct UsageIslandRootView: View {
     @Environment(AppState.self) private var appState
@@ -26,6 +27,12 @@ struct UsageIslandRootView: View {
             .onPreferenceChange(UsageIslandSizeKey.self) { size in
                 actions.sizeChanged(size)
             }
+            // 窗口画布可能比岛形大（过渡中），岛形始终贴顶居中。
+            .frame(
+                width: model.canvasSize.width > 1 ? model.canvasSize.width : nil,
+                height: model.canvasSize.height > 1 ? model.canvasSize.height : nil,
+                alignment: .top
+            )
             .environment(\.colorScheme, .dark)
     }
 
@@ -47,16 +54,23 @@ struct UsageIslandRootView: View {
                     message: model.message,
                     actions: actions
                 )
+                // 明细从顶栏下方滑出并淡入；收起时只淡出，跟着岛形一起收拢。
+                .transition(.asymmetric(
+                    insertion: .opacity.combined(with: .offset(y: -10)),
+                    removal: .opacity
+                ))
             }
         }
         .padding(.horizontal, UsageIslandShape.shoulder)
         .padding(.bottom, isExpanded ? 6 : 0)
-        .background(
-            UsageIslandShape(bottomRadius: isExpanded ? 18 : min(12, geometry.barHeight / 2))
-                .fill(Color.black)
-        )
-        .contentShape(UsageIslandShape(bottomRadius: isExpanded ? 18 : min(12, geometry.barHeight / 2)))
+        .background(UsageIslandShape(bottomRadius: bottomRadius).fill(Color.black))
+        .clipShape(UsageIslandShape(bottomRadius: bottomRadius))
+        .contentShape(UsageIslandShape(bottomRadius: bottomRadius))
         .accessibilityElement(children: .contain)
+    }
+
+    private var bottomRadius: CGFloat {
+        isExpanded ? 18 : min(12, geometry.barHeight / 2)
     }
 
     // MARK: Bar content
@@ -174,6 +188,12 @@ struct UsageIslandShape: Shape {
     /// 顶部外弯的宽度；内容需左右各让出这么多。
     static let shoulder: CGFloat = 6
     var bottomRadius: CGFloat
+
+    /// 展开 / 收起时底角随尺寸一起过渡。
+    var animatableData: CGFloat {
+        get { bottomRadius }
+        set { bottomRadius = newValue }
+    }
 
     func path(in rect: CGRect) -> Path {
         let s = Self.shoulder

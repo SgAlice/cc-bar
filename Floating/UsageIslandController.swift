@@ -97,7 +97,11 @@ final class UsageIslandController: NSObject {
     var openStatisticsHandler: (() -> Void)?
     var openSettingsHandler: (() -> Void)?
 
+    /// 岛形内容的实际尺寸（SwiftUI 回报）。
     private var contentSize: CGSize = .zero
+    /// 展开 / 收起过渡中：窗口画布保持前后两者的并集，动画结束再收回，收起动画不会被窗口裁掉。
+    private var isTransitioning = false
+    private var transitionTask: Task<Void, Never>?
     private var isHovering = false
     private var hoverTask: Task<Void, Never>?
     private var collapseTask: Task<Void, Never>?
@@ -196,7 +200,45 @@ final class UsageIslandController: NSObject {
     private func contentSizeChanged(_ size: CGSize) {
         guard size.width > 1, size.height > 1, size != contentSize else { return }
         contentSize = size
+        let current = model.canvasSize
+        setCanvas(isTransitioning
+            ? CGSize(width: max(current.width, size.width), height: max(current.height, size.height))
+            : size)
+    }
+
+    private func setCanvas(_ size: CGSize) {
+        if model.canvasSize != size {
+            // 画布跟着窗口一起瞬时变化，不能被卷进展开 / 收起的动画事务，否则岛形会相对窗口漂移。
+            var transaction = Transaction()
+            transaction.disablesAnimations = true
+            withTransaction(transaction) { model.canvasSize = size }
+        }
         layout()
+    }
+
+    /// 展开用略带回弹的弹簧，收起用不回弹的快速弹簧；系统开启「减弱动态效果」时直接切换。
+    private static let expandAnimation = Animation.spring(response: 0.42, dampingFraction: 0.74)
+    private static let collapseAnimation = Animation.spring(response: 0.3, dampingFraction: 0.95)
+    /// 覆盖两种弹簧的稳定时间。
+    private static let transitionDuration: Duration = .milliseconds(700)
+
+    private func setMode(_ mode: UsageIslandModel.Mode) {
+        guard model.mode != mode else { return }
+        guard !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else {
+            model.mode = mode
+            return
+        }
+        isTransitioning = true
+        transitionTask?.cancel()
+        withAnimation(mode == .expanded ? Self.expandAnimation : Self.collapseAnimation) {
+            model.mode = mode
+        }
+        transitionTask = Task { [weak self] in
+            try? await Task.sleep(for: Self.transitionDuration)
+            guard !Task.isCancelled, let self else { return }
+            self.isTransitioning = false
+            self.setCanvas(self.contentSize)
+        }
     }
 
     /// 选中的屏幕；断开后回落到主显示器。
@@ -226,7 +268,8 @@ final class UsageIslandController: NSObject {
         )
         // 几何变化会让内容重新布局，尺寸回报后再进来一次定位。
         if model.geometry != geometry { model.geometry = geometry }
-        let size = contentSize.width > 1 ? contentSize : CGSize(width: 160, height: geometry.barHeight)
+        let canvas = model.canvasSize.width > 1 ? model.canvasSize : contentSize
+        let size = canvas.width > 1 ? canvas : CGSize(width: 160, height: geometry.barHeight)
         let centerX = UsageIslandLayout.centerX(
             screenFrame: screen.frame,
             auxiliaryLeft: auxLeft,
@@ -293,13 +336,13 @@ final class UsageIslandController: NSObject {
         // 展开后排队的提示都在「最近的 Codex 回合」里，不再逐条弹出。
         model.queue.removeAll()
         model.skippedNotices = 0
-        model.mode = .expanded
+        setMode(.expanded)
         updateVisibility()
     }
 
     private func collapse() {
         if model.mode == .expanded {
-            model.mode = .collapsed
+            setMode(.collapsed)
         }
         if model.currentNotice != nil {
             scheduleDismiss(after: .seconds(1.5))
