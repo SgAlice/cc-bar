@@ -114,6 +114,7 @@
 		49C1B155000000000001AABB /* UsageAggregator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49C1B155000000000001AAAA /* UsageAggregator.swift */; };
 		49C1B156000000000001AABB /* UsageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49C1B156000000000001AAAA /* UsageService.swift */; };
 		49C1B197000000000001AABB /* UsageLogWatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49C1B197000000000001AAAA /* UsageLogWatcher.swift */; };
+		4ACE0008000000000001AABB /* ClaudeTurnLogParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4ACE0008000000000001AAAA /* ClaudeTurnLogParser.swift */; };
 		4ACE0002000000000001AABB /* CodexTurnTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4ACE0002000000000001AAAA /* CodexTurnTracker.swift */; };
 		4ACE0001000000000001AABB /* CodexTurnLedger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4ACE0001000000000001AAAA /* CodexTurnLedger.swift */; };
 		49C1BA11000000000001AABB /* CycleUsage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49C1BA11000000000001AAAA /* CycleUsage.swift */; };
@@ -285,6 +286,7 @@
 		49C1B16A000000000001AAAA /* ModelProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelProvider.swift; sourceTree = "<group>"; };
 		49C1B156000000000001AAAA /* UsageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageService.swift; sourceTree = "<group>"; };
 		49C1B197000000000001AAAA /* UsageLogWatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageLogWatcher.swift; sourceTree = "<group>"; };
+		4ACE0008000000000001AAAA /* ClaudeTurnLogParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeTurnLogParser.swift; sourceTree = "<group>"; };
 		4ACE0002000000000001AAAA /* CodexTurnTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexTurnTracker.swift; sourceTree = "<group>"; };
 		4ACE0001000000000001AAAA /* CodexTurnLedger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexTurnLedger.swift; sourceTree = "<group>"; };
 		49C1BA11000000000001AAAA /* CycleUsage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CycleUsage.swift; sourceTree = "<group>"; };
@@ -562,6 +564,7 @@
 				49C1B156000000000001AAAA /* UsageService.swift */,
 				49C2AA05000000000001AAAA /* UsageHistoryConsistency.swift */,
 				49C1B197000000000001AAAA /* UsageLogWatcher.swift */,
+				4ACE0008000000000001AAAA /* ClaudeTurnLogParser.swift */,
 				4ACE0002000000000001AAAA /* CodexTurnTracker.swift */,
 				4ACE0001000000000001AAAA /* CodexTurnLedger.swift */,
 				49C1BA11000000000001AAAA /* CycleUsage.swift */,
@@ -876,6 +879,7 @@
 				49C1B156000000000001AABB /* UsageService.swift in Sources */,
 				49C2AA06000000000001AAAA /* UsageHistoryConsistency.swift in Sources */,
 				49C1B197000000000001AABB /* UsageLogWatcher.swift in Sources */,
+				4ACE0008000000000001AABB /* ClaudeTurnLogParser.swift in Sources */,
 				4ACE0002000000000001AABB /* CodexTurnTracker.swift in Sources */,
 				4ACE0001000000000001AABB /* CodexTurnLedger.swift in Sources */,
 				49C1BA11000000000001AABB /* CycleUsage.swift in Sources */,

@@ -89,14 +89,7 @@ struct UsageIslandRootView: View {
             }
         } else if let notice {
             HStack(spacing: 6) {
-                ServiceTile(
-                    logoName: UsageApp.codex.logoName,
-                    fallback: "C",
-                    tint: UsageApp.codex.tintColor,
-                    size: 16,
-                    logoSize: 10,
-                    cornerRadius: 4
-                )
+                UsageIslandTurnText.tile(notice.app, size: 16)
                 Text(UsageIslandTurnText.title(notice))
                     .lineLimit(1)
                     .truncationMode(.tail)
@@ -144,7 +137,7 @@ struct UsageIslandRootView: View {
     }
 
     private var barHelp: String {
-        if notice != nil { return tr("Open this conversation in Codex", "在 Codex 中打开对话") }
+        if let notice { return UsageIslandTurnText.openHelp(notice) }
         return geometry.hasNotch
             ? tr("Click to open Statistics", "点击打开统计")
             : tr("Click to open Statistics. Drag to move.", "点击打开统计，拖动可左右移动")
@@ -320,7 +313,25 @@ private struct UsageIslandTurnAmount: View {
 @MainActor
 enum UsageIslandTurnText {
     static func title(_ turn: CodexTurnRecord) -> String {
-        PrivacyDisplay.conversation(key: "codex:\(turn.threadID)", title: turn.title)
+        PrivacyDisplay.conversation(key: turn.conversationKey, title: turn.title)
+    }
+
+    static func tile(_ app: UsageApp, size: CGFloat) -> some View {
+        ServiceTile(
+            logoName: app.logoName,
+            fallback: String(app.displayName.prefix(1)),
+            tint: app.tintColor,
+            size: size,
+            logoSize: size * 0.625,
+            cornerRadius: size / 4
+        )
+    }
+
+    /// Codex 有官方深链可以打开对话；Claude Code 没有公开的会话深链，改为在统计页对话视图里定位。
+    static func openHelp(_ turn: CodexTurnRecord) -> String {
+        turn.app == .codex
+            ? tr("Open this conversation in Codex", "在 Codex 中打开对话")
+            : tr("Show this conversation in Statistics", "在统计中查看对话")
     }
 
     /// 非完整状态的短标签。
@@ -450,7 +461,7 @@ private struct UsageIslandExpandedView: View {
     @ViewBuilder
     private var turns: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(tr("Recent Codex turns", "最近的 Codex 回合"))
+            Text(tr("Recent turns", "最近的回合"))
                 .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(.secondary)
             if recentTurns.isEmpty {
@@ -461,6 +472,7 @@ private struct UsageIslandExpandedView: View {
                 ForEach(recentTurns.prefix(5)) { turn in
                     Button { actions.openTurn(turn) } label: {
                         HStack(spacing: 8) {
+                            UsageIslandTurnText.tile(turn.app, size: 14)
                             Text(UsageIslandTurnText.title(turn))
                                 .lineLimit(1)
                                 .truncationMode(.tail)
@@ -472,6 +484,7 @@ private struct UsageIslandExpandedView: View {
                     }
                     .buttonStyle(.plain)
                     .pointingHandCursor()
+                    .help(UsageIslandTurnText.openHelp(turn))
                 }
             }
             if let message {

@@ -2,6 +2,9 @@ import Foundation
 
 // MARK: - 回合账本
 //
+// 账本同时记录 Codex 与 Claude Code 的回合（`CodexTurnRecord.app`）；类型名沿用最初只支持 Codex 时的命名。
+// Claude Code 的解析规则见 `ClaudeTurnLogParser`。
+//
 // 顶部用量胶囊的「本轮增量」只来自这里，不读 `usage-history` 快照，也不拿两次扫描的差值。
 // 数据源是 Codex 本机日志里的逐调用记录 `token_usage_record`：每条带 `response_id`、
 // `thread_id`、`turn_id`、`root_turn_id`、`session_id`（根对话），以及该线程本回合的累计
@@ -130,6 +133,8 @@ nonisolated struct CodexTurnSegment: Codable, Equatable, Sendable {
 
 /// 一个根回合的账本记录。
 nonisolated struct CodexTurnRecord: Codable, Equatable, Sendable, Identifiable {
+    /// 回合所属服务：Codex 或 Claude Code。
+    var app: UsageApp = .codex
     var threadID: String
     var turnID: String
     var startedAt: Date?
@@ -153,6 +158,9 @@ nonisolated struct CodexTurnRecord: Codable, Equatable, Sendable, Identifiable {
 
     var id: String { CodexTurnSegment.key(threadID: threadID, turnID: turnID) }
 
+    /// 与统计页对话 key 一致（`codex:<id>` / `claude:<sessionId>`），用于隐私匿名编号与跳转。
+    var conversationKey: String { "\(app.rawValue):\(threadID)" }
+
     var hasSubagents: Bool { segments.values.contains { !$0.isRoot } }
 
     var isEnded: Bool { status != .running }
@@ -166,6 +174,12 @@ nonisolated struct CodexTurnRecord: Codable, Equatable, Sendable, Identifiable {
 // MARK: - 事件
 
 nonisolated struct CodexUsageRecordEvent: Equatable, Sendable {
+    /// 解析时已按服务自己的规则算好的费用（Claude Code：5m / 1h 缓存写入与 advisor 推理）。
+    /// `costUSD == nil` 表示找不到价格。为 nil 时由账本用 `CodexTurnPricer` 计价。
+    nonisolated struct PrecomputedCost: Equatable, Sendable {
+        var costUSD: Decimal?
+    }
+
     var responseID: String?
     var threadID: String
     var turnID: String
@@ -177,6 +191,7 @@ nonisolated struct CodexUsageRecordEvent: Equatable, Sendable {
     var model: String
     var speed: UsageSpeed
     var timestamp: Date
+    var precomputedCost: PrecomputedCost? = nil
 
     /// `response_id` 缺失时的确定性兼容键：同一线程同一回合内累计值单调递增，重放同一行得到同一个键。
     var dedupeKey: String {
@@ -228,12 +243,12 @@ nonisolated struct CodexTurnLedger: Codable, Equatable, Sendable {
         )
     }
 
-    /// 应用一条事件。`now` 是本机处理时刻，只用于等待超时。
-    mutating func apply(_ event: CodexTurnEvent, now: Date, pricer: CodexTurnPricer) {
+    /// 应用一条事件。`now` 是本机处理时刻，只用于等待超时；`app` 用于新建的根回合。
+    mutating func apply(_ event: CodexTurnEvent, now: Date, pricer: CodexTurnPricer, app: UsageApp = .codex) {
         switch event {
         case let .started(threadID, turnID, rootTurnID, at):
             if turnID == rootTurnID {
-                guard var turn = rootTurn(turnID, threadID: threadID, createIfMissing: true) else { return }
+                guard var turn = rootTurn(turnID, threadID: threadID, app: app) else { return }
                 if turn.startedAt == nil { turn.startedAt = at }
                 turn.segments[CodexTurnSegment.key(threadID: threadID, turnID: turnID), default:
                     CodexTurnSegment(threadID: threadID, turnID: turnID, isRoot: true)].isRoot = true
@@ -250,7 +265,7 @@ nonisolated struct CodexTurnLedger: Codable, Equatable, Sendable {
 
         case let .ended(threadID, turnID, rootTurnID, at, interrupted):
             if turnID == rootTurnID {
-                guard var turn = rootTurn(turnID, threadID: threadID, createIfMissing: true) else { return }
+                guard var turn = rootTurn(turnID, threadID: threadID, app: app) else { return }
                 let key = CodexTurnSegment.key(threadID: threadID, turnID: turnID)
                 turn.segments[key, default: CodexTurnSegment(threadID: threadID, turnID: turnID, isRoot: true)].ended = true
                 if turn.status == .running {
@@ -268,7 +283,7 @@ nonisolated struct CodexTurnLedger: Codable, Equatable, Sendable {
             }
 
         case let .usage(record):
-            guard var turn = rootTurn(record.rootTurnID, threadID: record.rootThreadID, createIfMissing: true) else { return }
+            guard var turn = rootTurn(record.rootTurnID, threadID: record.rootThreadID, app: app) else { return }
             let dedupeKey = record.dedupeKey
             guard !turn.eventIDs.contains(dedupeKey) else { return }
             turn.eventIDs.append(dedupeKey)
@@ -280,8 +295,10 @@ nonisolated struct CodexTurnLedger: Codable, Equatable, Sendable {
                 cacheCreationTokens: record.raw.cacheWrite,
                 requestCount: 1
             )
-            if let cost = pricer(record.model, record.speed, record.raw, record.timestamp) {
-                usage.costUSD = cost.total
+            let cost: Decimal? = record.precomputedCost.map(\.costUSD)
+                ?? pricer(record.model, record.speed, record.raw, record.timestamp)?.total
+            if let cost {
+                usage.costUSD = cost
             } else {
                 usage.hasUnpricedUsage = true
             }
@@ -313,12 +330,11 @@ nonisolated struct CodexTurnLedger: Codable, Equatable, Sendable {
     }
 
     /// 取根回合；同一 `turn_id` 已属于别的线程时（fork 重放）返回 nil，不串账。
-    private mutating func rootTurn(_ turnID: String, threadID: String, createIfMissing: Bool) -> CodexTurnRecord? {
+    private func rootTurn(_ turnID: String, threadID: String, app: UsageApp) -> CodexTurnRecord? {
         if let existing = turns[turnID] {
             return existing.threadID == threadID ? existing : nil
         }
-        guard createIfMissing else { return nil }
-        return CodexTurnRecord(threadID: threadID, turnID: turnID)
+        return CodexTurnRecord(app: app, threadID: threadID, turnID: turnID)
     }
 
     /// 结算等待中的回合，返回本次需要弹出提示的回合（按结束顺序）。
@@ -422,6 +438,10 @@ nonisolated struct CodexTurnFileCursor: Codable, Equatable, Sendable {
     /// 本文件当前进行中的回合，供 `token_count` 归属。
     var currentTurnID: String?
     var currentRootTurnID: String?
+    /// Claude Code：当前回合已经结束（收到最终回答或中断），之后的行不再触发结束事件。
+    var claudeTurnEnded = false
+    /// Claude Code：本文件第一条用户提示，作为没有标题索引时的对话名。
+    var fallbackTitle: String?
 }
 
 nonisolated enum CodexTurnLogParser {

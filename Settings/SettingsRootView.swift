@@ -421,10 +421,10 @@ struct SettingsRootView: View {
             if settings.usageIslandEnabled {
                 InsetDivider()
                 PrefsRow(
-                    label: "Codex turn notices",
-                    chinese: "Codex 回合完成提示",
-                    desc: "Shows the conversation's usage after each turn. Reads Codex logs on this Mac.",
-                    chineseDesc: "每轮结束后显示该对话本轮的用量，读取本机 Codex 日志"
+                    label: "Turn notices",
+                    chinese: "回合完成提示",
+                    desc: "Shows the conversation's usage after each Codex or Claude Code turn. Reads their logs on this Mac.",
+                    chineseDesc: "Codex、Claude Code 每轮结束后显示该对话本轮的用量，读取本机日志"
                 ) {
                     Toggle("", isOn: Binding(
                         get: { settings.usageIslandTurnNotices },

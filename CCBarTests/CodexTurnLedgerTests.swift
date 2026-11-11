@@ -397,6 +397,110 @@ final class CodexTurnLedgerTests: XCTestCase {
         XCTAssertGreaterThan(turn.usage.costUSD, 0)
     }
 
+    // MARK: - Claude Code
+
+    func testClaudeTurnSumsCallsAndEndsOnFinalText() throws {
+        var log = ClaudeFixture(session: threadA)
+        log.prompt("p1", at: launch + 10)
+        // 第一次调用：thinking + tool_use 两个内容块，每行都带同一个 message.id 与最终用量。
+        log.assistant("msg_1", blocks: ["thinking", "tool_use"], stop: "tool_use",
+                      input: 10, output: 200, cacheRead: 5_000, cacheWrite: 1_000)
+        log.toolResult(promptID: "p1")
+        // 最终回答：thinking 行还不算结束，文本块写入后才结束。
+        log.assistant("msg_2", blocks: ["thinking"], stop: "end_turn",
+                      input: 5, output: 300, cacheRead: 6_000, cacheWrite: 0)
+        var ledger = CodexTurnLedger()
+        var cursor = CodexTurnFileCursor()
+        for event in ClaudeTurnLogParser.parse(lines: log.lines, cursor: &cursor) {
+            ledger.apply(event, now: launch + 30, pricer: Self.fakePricer, app: .claude)
+        }
+        XCTAssertEqual(ledger.turns["p1"]?.status, .running, "最后一块是 thinking，回答还没写完")
+
+        log.assistant("msg_2", blocks: ["text"], stop: "end_turn",
+                      input: 5, output: 300, cacheRead: 6_000, cacheWrite: 0)
+        for event in ClaudeTurnLogParser.parse(lines: log.lines.suffix(1), cursor: &cursor) {
+            ledger.apply(event, now: launch + 31, pricer: Self.fakePricer, app: .claude)
+        }
+        let turn = try XCTUnwrap(ledger.settle(now: launch + 31, trackingStartedAt: launch).first)
+        XCTAssertEqual(turn.app, .claude)
+        XCTAssertEqual(turn.threadID, threadA)
+        XCTAssertEqual(turn.conversationKey, "claude:\(threadA)")
+        XCTAssertTrue(turn.isExact)
+        XCTAssertEqual(turn.usage.requestCount, 2, "同一 message.id 的多行只计一次")
+        XCTAssertEqual(turn.usage.inputTokens, 15)
+        XCTAssertEqual(turn.usage.outputTokens, 500)
+        XCTAssertEqual(turn.usage.cacheReadTokens, 11_000)
+        XCTAssertEqual(turn.usage.cacheCreationTokens, 1_000)
+        XCTAssertEqual(cursor.fallbackTitle, "Prompt p1")
+    }
+
+    func testClaudeInterruptionAndSupersededTurns() throws {
+        var log = ClaudeFixture(session: threadA)
+        log.prompt("p1", at: launch + 10)
+        log.assistant("msg_1", blocks: ["tool_use"], stop: "tool_use", input: 10, output: 20, cacheRead: 0, cacheWrite: 0)
+        log.interrupt(promptID: "p1")
+        log.prompt("p2", at: launch + 20)
+        log.assistant("msg_2", blocks: ["tool_use"], stop: "tool_use", input: 10, output: 20, cacheRead: 0, cacheWrite: 0)
+        // 没有最终回答就开始了下一回合：上一回合按结束处理。
+        log.prompt("p3", at: launch + 30)
+        log.assistant("msg_3", blocks: ["text"], stop: "end_turn", input: 1, output: 2, cacheRead: 0, cacheWrite: 0)
+
+        var ledger = CodexTurnLedger()
+        var cursor = CodexTurnFileCursor()
+        for event in ClaudeTurnLogParser.parse(lines: log.lines, cursor: &cursor) {
+            ledger.apply(event, now: launch + 40, pricer: Self.fakePricer, app: .claude)
+        }
+        let notices = ledger.settle(now: launch + 40, trackingStartedAt: launch)
+        XCTAssertEqual(notices.map(\.turnID), ["p1", "p2", "p3"])
+        XCTAssertEqual(notices[0].status, .interrupted)
+        XCTAssertEqual(notices[0].usage.totalTokens, 30)
+        XCTAssertEqual(notices[1].status, .complete)
+        XCTAssertEqual(notices[2].usage.totalTokens, 3)
+    }
+
+    /// 与 CCBar 现有 Claude 扫描对同一份日志对账：调用数、各类 token 与费用一致。
+    func testClaudeLedgerMatchesClaudeScanner() async throws {
+        let root = try makeTempRoot()
+        let fileURL = root.appendingPathComponent("-Users-test-project/\(threadB).jsonl")
+        try FileManager.default.createDirectory(at: fileURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+        var log = ClaudeFixture(session: threadB, model: "claude-fable-5-2")
+        log.prompt("p1", at: launch + 10)
+        log.assistant("msg_1", blocks: ["thinking", "tool_use"], stop: "tool_use",
+                      input: 12, output: 400, cacheRead: 30_000, cacheWrite: 2_000)
+        log.toolResult(promptID: "p1")
+        log.assistant("msg_2", blocks: ["text"], stop: "end_turn",
+                      input: 3, output: 250, cacheRead: 32_000, cacheWrite: 500)
+        try write(log.lines, to: fileURL)
+
+        let scan = ClaudeJSONLScanner.scan(
+            previous: [:], seenMessageIds: [], root: root,
+            conversationIndex: ConversationTitleIndex.ClaudeIndex(titles: [:], projects: [:])
+        )
+        let engine = CodexTurnEngine(
+            sessionsRoot: root.appendingPathComponent("codex-none"), claudeRoot: root,
+            stateURL: nil, titleLookup: { [:] }
+        )
+        _ = await engine.bootstrap(now: launch)
+        let ledger = await engine.ledgerForTesting()
+        let turn = try XCTUnwrap(ledger.turns["p1"])
+
+        XCTAssertTrue(turn.isExact)
+        XCTAssertEqual(turn.usage.requestCount, scan.entries.reduce(0) { $0 + $1.requestCount })
+        XCTAssertEqual(turn.usage.inputTokens, scan.entries.reduce(0) { $0 + $1.inputTokens })
+        XCTAssertEqual(turn.usage.outputTokens, scan.entries.reduce(0) { $0 + $1.outputTokens })
+        XCTAssertEqual(turn.usage.cacheReadTokens, scan.entries.reduce(0) { $0 + $1.cacheReadTokens })
+        XCTAssertEqual(turn.usage.cacheCreationTokens, scan.entries.reduce(0) { $0 + $1.cacheCreationTokens })
+        XCTAssertEqual(turn.usage.costUSD, scan.entries.reduce(Decimal(0)) { $0 + ($1.costUSD ?? 0) })
+        XCTAssertGreaterThan(turn.usage.costUSD, 0)
+    }
+
+    func testClaudeCandidateFilterSkipsMetadataLines() {
+        XCTAssertFalse(ClaudeTurnLogParser.isCandidate(#"{"type":"api-request","id":"x"}"#))
+        XCTAssertFalse(ClaudeTurnLogParser.isCandidate(#"{"type":"queue-operation","operation":"enqueue"}"#))
+        XCTAssertTrue(ClaudeTurnLogParser.isCandidate(#"{"parentUuid":null,"isSidechain":false,"type":"user"}"#))
+        XCTAssertTrue(ClaudeTurnLogParser.isCandidate(#"{"type":"assistant","message":{}}"#))
+    }
+
     // MARK: - Helpers
 
     private func apply(_ log: Fixture, to ledger: inout CodexTurnLedger, now: Date) -> [CodexTurnRecord] {
@@ -542,4 +646,71 @@ private extension ISO8601DateFormatter {
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return formatter
     }()
+}
+
+/// 按真实 Claude Code 日志结构生成脱敏 JSONL（字段与本机 Claude Code 桌面版一致，内容为占位）。
+private struct ClaudeFixture {
+    let session: String
+    var model = "claude-fable-5-2"
+    var lines: [String] = []
+    private var clock = Date(timeIntervalSince1970: 1_794_370_000)
+
+    init(session: String, model: String = "claude-fable-5-2") {
+        self.session = session
+        self.model = model
+    }
+
+    mutating func prompt(_ promptID: String, at date: Date) {
+        clock = date
+        add([
+            "type": "user", "isSidechain": false, "promptId": promptID,
+            "turnOrigin": "human", "turnPosition": ["promptIndex": 1, "turnIndex": 1],
+            "message": ["role": "user", "content": "Prompt \(promptID)"]
+        ])
+    }
+
+    mutating func toolResult(promptID: String) {
+        add([
+            "type": "user", "isSidechain": false, "promptId": promptID,
+            "message": ["role": "user", "content": [["type": "tool_result", "tool_use_id": "t", "content": "ok"]]]
+        ])
+    }
+
+    mutating func interrupt(promptID: String) {
+        add([
+            "type": "user", "isSidechain": false, "promptId": promptID,
+            "message": ["role": "user", "content": [["type": "text", "text": "[Request interrupted by user]"]]]
+        ])
+    }
+
+    /// 每个内容块一行；各行带同一 message.id 与最终用量。
+    mutating func assistant(_ id: String, blocks: [String], stop: String,
+                            input: Int, output: Int, cacheRead: Int, cacheWrite: Int) {
+        for block in blocks {
+            add([
+                "type": "assistant", "isSidechain": false, "requestId": "req_\(id)",
+                "message": [
+                    "id": id, "model": model, "role": "assistant", "stop_reason": stop,
+                    "content": [["type": block]],
+                    "usage": [
+                        "input_tokens": input, "output_tokens": output,
+                        "cache_read_input_tokens": cacheRead, "cache_creation_input_tokens": cacheWrite,
+                        "cache_creation": ["ephemeral_5m_input_tokens": cacheWrite, "ephemeral_1h_input_tokens": 0],
+                        "speed": "standard"
+                    ]
+                ]
+            ])
+        }
+    }
+
+    private mutating func add(_ object: [String: Any]) {
+        clock = clock.addingTimeInterval(1)
+        var root = object
+        root["sessionId"] = session
+        root["uuid"] = UUID().uuidString
+        root["timestamp"] = ISO8601DateFormatter.fractional.string(from: clock)
+        root["cwd"] = "/tmp/project"
+        let data = try! JSONSerialization.data(withJSONObject: root, options: [.sortedKeys])
+        lines.append(String(decoding: data, as: UTF8.self))
+    }
 }

@@ -7,7 +7,7 @@ import os
 
 /// 读日志、改账本、落盘都在这个 actor 里串行执行，不占主线程。
 ///
-/// 只读 `~/.codex/sessions` 下有变化的文件，按字节 offset 续读；不枚举全部历史，
+/// 只读 `~/.codex/sessions` 与 `~/.claude/projects` 下有变化的文件，按字节 offset 续读；不枚举全部历史，
 /// 也不经过 `UsageService` 的周期扫描与 15 分钟写盘节流。
 actor CodexTurnEngine {
     struct Result: Sendable {
@@ -19,13 +19,17 @@ actor CodexTurnEngine {
     }
 
     nonisolated struct PersistedState: Codable, Sendable {
-        var version = 1
+        /// v2 起账本区分 Codex / Claude Code；旧版本状态直接丢弃、按近期日志重新回读。
+        var version = Self.currentVersion
+        static let currentVersion = 2
         var savedAt: Date
         var ledger: CodexTurnLedger
         var cursors: [String: CodexTurnFileCursor]
     }
 
     private let sessionsRoot: URL
+    /// Claude Code 日志根；nil 表示不追踪 Claude Code。
+    private let claudeRoot: URL?
     private let stateURL: URL?
     private let pricer: CodexTurnPricer
     private let titleLookup: @Sendable () -> [String: String]
@@ -43,14 +47,21 @@ actor CodexTurnEngine {
 
     init(
         sessionsRoot: URL,
+        claudeRoot: URL? = nil,
         stateURL: URL?,
         pricer: @escaping CodexTurnPricer = CodexTurnLedger.productionPricer,
-        titleLookup: @escaping @Sendable () -> [String: String] = { ConversationTitleIndex.codexTitles() }
+        titleLookup: @escaping @Sendable () -> [String: String] = CodexTurnEngine.productionTitles
     ) {
         self.sessionsRoot = sessionsRoot
+        self.claudeRoot = claudeRoot
         self.stateURL = stateURL
         self.pricer = pricer
         self.titleLookup = titleLookup
+    }
+
+    /// 对话标题：Codex 的 `session_index.jsonl` 与 Claude Code 的 `history.jsonl`（键都是会话 UUID，不会冲突）。
+    static let productionTitles: @Sendable () -> [String: String] = {
+        ConversationTitleIndex.codexTitles().merging(ConversationTitleIndex.claudeIndex().titles) { codex, _ in codex }
     }
 
     static func defaultStateURL() -> URL {
@@ -70,13 +81,14 @@ actor CodexTurnEngine {
     func bootstrap(now: Date) -> Result {
         trackingStartedAt = now
         if let stateURL, let data = try? Data(contentsOf: stateURL),
-           let state = try? JSONDecoder().decode(PersistedState.self, from: data), state.version == 1 {
+           let state = try? JSONDecoder().decode(PersistedState.self, from: data),
+           state.version == PersistedState.currentVersion {
             ledger = state.ledger
             cursors = state.cursors
         }
         // 有游标的文件从原处续读；没有游标的只回读近期改过的，恢复进行中的回合。
         let since = now.addingTimeInterval(-Self.bootstrapWindow)
-        let files = JSONLDirectoryEnumerator.enumerate(at: sessionsRoot, minimumMtime: since).files
+        let files = roots.flatMap { JSONLDirectoryEnumerator.enumerate(at: $0, minimumMtime: since).files }
         readFiles(files.map(\.url))
         return finish(now: now, sawTurnEnd: false)
     }
@@ -86,16 +98,21 @@ actor CodexTurnEngine {
         let urls: [URL]
         if let paths {
             // FSEvents 上报的是解析过符号链接的真实路径，两种写法都认，读取时换回监听根下的路径。
-            let roots = Array(Set([sessionsRoot.path, sessionsRoot.resolvingSymlinksInPath().path]))
             urls = paths.compactMap { path -> URL? in
-                guard path.hasSuffix(".jsonl"),
-                      let root = roots.first(where: { path.hasPrefix($0 + "/") }) else { return nil }
-                return sessionsRoot.appendingPathComponent(String(path.dropFirst(root.count + 1)))
+                guard path.hasSuffix(".jsonl") else { return nil }
+                for root in roots {
+                    for form in Set([root.path, root.resolvingSymlinksInPath().path]) where path.hasPrefix(form + "/") {
+                        return root.appendingPathComponent(String(path.dropFirst(form.count + 1)))
+                    }
+                }
+                return nil
             }
         } else {
-            urls = JSONLDirectoryEnumerator.enumerate(
-                at: sessionsRoot, minimumMtime: now.addingTimeInterval(-Self.endSweepWindow)
-            ).files.map(\.url)
+            urls = roots.flatMap {
+                JSONLDirectoryEnumerator.enumerate(
+                    at: $0, minimumMtime: now.addingTimeInterval(-Self.endSweepWindow)
+                ).files.map(\.url)
+            }
         }
         let endedBefore = endedRootTurnIDs()
         readFiles(urls)
@@ -135,6 +152,13 @@ actor CodexTurnEngine {
 
     // MARK: Internals
 
+    private var roots: [URL] { [sessionsRoot] + (claudeRoot.map { [$0] } ?? []) }
+
+    private func isClaudeFile(_ url: URL) -> Bool {
+        guard let claudeRoot else { return false }
+        return url.path.hasPrefix(claudeRoot.path + "/")
+    }
+
     private func endedRootTurnIDs() -> Set<String> {
         Set(ledger.turns.values.filter(\.isEnded).map(\.turnID))
     }
@@ -151,8 +175,13 @@ actor CodexTurnEngine {
         )
         if !notices.isEmpty {
             let titles = titleLookup()
+            // Claude Code 没有标题索引的对话，用本文件第一条提示做对话名。
+            var fallbacks: [String: String] = [:]
+            for cursor in cursors.values {
+                if let thread = cursor.canonicalThreadID, let title = cursor.fallbackTitle { fallbacks[thread] = title }
+            }
             for index in notices.indices {
-                let title = titles[notices[index].threadID]
+                let title = titles[notices[index].threadID] ?? fallbacks[notices[index].threadID]
                 notices[index].title = title
                 ledger.turns[notices[index].turnID]?.title = title
             }
@@ -180,7 +209,8 @@ actor CodexTurnEngine {
 
     private func readFile(_ url: URL) {
         let path = url.path
-        guard let initial = CodexTurnLogParser.initialCursor(for: url) else { return }
+        let isClaude = isClaudeFile(url)
+        guard let initial = isClaude ? CodexTurnFileCursor() : CodexTurnLogParser.initialCursor(for: url) else { return }
         let attributes = try? FileManager.default.attributesOfItem(atPath: path)
         guard let size = (attributes?[.size] as? NSNumber)?.uint64Value else {
             // 文件被移走（归档）时保留游标，不当成错误。
@@ -195,12 +225,14 @@ actor CodexTurnEngine {
         }
         var events: [CodexTurnEvent] = []
         let outcome = JSONLLineReader.streamLines(url: url, fromOffset: cursor.offset) { batch in
-            events += CodexTurnLogParser.parse(lines: batch, cursor: &cursor)
+            events += isClaude
+                ? ClaudeTurnLogParser.parse(lines: batch, cursor: &cursor)
+                : CodexTurnLogParser.parse(lines: batch, cursor: &cursor)
         }
         guard case let .success(newOffset) = outcome else { return }
         let now = Date()
         for event in events {
-            ledger.apply(event, now: now, pricer: pricer)
+            ledger.apply(event, now: now, pricer: pricer, app: isClaude ? .claude : .codex)
         }
         cursor.offset = newOffset
         cursor.mtime = mtime
@@ -270,7 +302,7 @@ nonisolated private final class CodexTurnEventSink: Sendable {
 
 // MARK: - 主 actor 门面
 
-/// Codex 逐回合追踪。只在顶部用量胶囊开启了「回合完成提示」时运行。
+/// Codex 与 Claude Code 逐回合追踪。只在顶部用量胶囊开启了「回合完成提示」时运行。
 @MainActor
 @Observable
 final class CodexTurnTracker {
@@ -302,6 +334,8 @@ final class CodexTurnTracker {
         FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".codex/sessions", isDirectory: true)
     }
 
+    static var claudeRoot: URL { ClaudeJSONLScanner.defaultRoot() }
+
     private init() {}
 
     func start(notificationsEnabled: Bool) {
@@ -311,7 +345,11 @@ final class CodexTurnTracker {
             return
         }
         isRunning = true
-        let engine = CodexTurnEngine(sessionsRoot: Self.sessionsRoot, stateURL: CodexTurnEngine.defaultStateURL())
+        let engine = CodexTurnEngine(
+            sessionsRoot: Self.sessionsRoot,
+            claudeRoot: Self.claudeRoot,
+            stateURL: CodexTurnEngine.defaultStateURL()
+        )
         self.engine = engine
         let sink = CodexTurnEventSink {
             Task { @MainActor in CodexTurnTracker.shared.pump() }
@@ -407,12 +445,13 @@ final class CodexTurnTracker {
     // MARK: FSEvents
 
     private func startStream(sink: CodexTurnEventSink) {
-        let root = Self.sessionsRoot
-        // sessions 还不存在（从没用过 Codex）时监听上一级，目录出现后照样能收到。
-        let watched = FileManager.default.fileExists(atPath: root.path)
-            ? root.path
-            : root.deletingLastPathComponent().path
-        guard FileManager.default.fileExists(atPath: watched) else { return }
+        // 日志目录还不存在（从没用过该服务）时监听上一级，目录出现后照样能收到。
+        let watched = [Self.sessionsRoot, Self.claudeRoot].compactMap { root -> String? in
+            if FileManager.default.fileExists(atPath: root.path) { return root.path }
+            let parent = root.deletingLastPathComponent().path
+            return FileManager.default.fileExists(atPath: parent) ? parent : nil
+        }
+        guard !watched.isEmpty else { return }
 
         var context = FSEventStreamContext(
             version: 0,
@@ -435,7 +474,7 @@ final class CodexTurnTracker {
             kCFAllocatorDefault,
             callback,
             &context,
-            [watched] as CFArray,
+            watched as CFArray,
             FSEventStreamEventId(kFSEventStreamEventIdSinceNow),
             Self.latency,
             UInt32(

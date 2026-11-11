@@ -436,9 +436,18 @@ final class UsageIslandController: NSObject {
         openStatisticsHandler?()
     }
 
-    /// 用官方深链 `codex://threads/<id>` 打开对话；只保证打开该对话，不保证定位到具体回合或已有窗口。
+    /// Codex：用官方深链 `codex://threads/<id>` 打开对话；只保证打开该对话，不保证定位到具体回合或已有窗口。
+    /// Claude Code：没有公开的会话深链，打开统计页对话视图并选中该对话（同弹出面板「最近对话」）。
     private func openTurn(_ turn: CodexTurnRecord) {
         guard !justDragged else { return }
+        if model.currentNotice?.id == turn.id {
+            advanceQueue()
+        }
+        guard turn.app == .codex else {
+            appState?.pendingStatsConversation = PendingStatsConversation(key: turn.conversationKey, app: turn.app)
+            openStatisticsHandler?()
+            return
+        }
         guard let url = URL(string: "codex://threads/\(turn.threadID)") else { return }
         guard NSWorkspace.shared.urlForApplication(toOpen: url) != nil else {
             showMessage(tr("Couldn't open conversation. Install or update Codex.", "无法打开对话，请安装或更新 Codex"))
@@ -451,9 +460,6 @@ final class UsageIslandController: NSObject {
             Task { @MainActor in
                 UsageIslandController.shared.showMessage(tr("Couldn't open conversation in Codex", "无法在 Codex 中打开对话"))
             }
-        }
-        if model.currentNotice?.id == turn.id {
-            advanceQueue()
         }
     }
 
