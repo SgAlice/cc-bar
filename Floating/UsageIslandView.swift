@@ -230,7 +230,8 @@ private extension View {
 
 // MARK: - 顶栏行
 
-/// 与菜单栏同高的一行：左翼 + 刘海（或「·」）+ 右翼。两翼按较宽的一侧等宽，刘海始终居中。
+/// 与菜单栏同高的一行：左翼 + 刘海（或「·」）+ 右翼，左右边距相同。
+/// 有刘海时两翼按较宽的一侧等宽（刘海才能居中），文字在各自一翼内居中；无刘海时按实际宽度排列，整体居中。
 private struct UsageIslandBar<Left: View, Right: View>: View {
     let geometry: UsageIslandGeometry
     @ViewBuilder let left: () -> Left
@@ -242,8 +243,8 @@ private struct UsageIslandBar<Left: View, Right: View>: View {
             left()
                 .fixedSize()
                 .background(measure)
-                .frame(minWidth: wingWidth, alignment: .trailing)
-                .padding(.leading, 10)
+                .frame(minWidth: geometry.hasNotch ? wingWidth : nil)
+                .padding(.leading, 12)
             Group {
                 if geometry.hasNotch {
                     Color.clear.frame(width: geometry.notchWidth + 16)
@@ -254,8 +255,8 @@ private struct UsageIslandBar<Left: View, Right: View>: View {
             right()
                 .fixedSize()
                 .background(measure)
-                .frame(minWidth: wingWidth, alignment: .leading)
-                .padding(.trailing, 10)
+                .frame(minWidth: geometry.hasNotch ? wingWidth : nil)
+                .padding(.trailing, 12)
         }
         .font(.system(size: geometry.barHeight > 26 ? 13 : 12, weight: .semibold))
         .foregroundStyle(.white)
