@@ -6,7 +6,7 @@ import SwiftUI
 // - 收起：刘海左侧「今日 $…」，右侧「…M」；无刘海屏幕在菜单栏正中显示同样的黑色岛形，中间用「·」分隔；
 // - 回合提示：左侧换成「对话名」，右侧换成「+$… · +…M」，约 4 秒后收回；
 // - 展开（悬停）：从岛形向下展开今日明细与最近回合。
-// 左右两翼等宽，刘海始终落在正中。始终用深色外观。
+// 左右两翼等宽，刘海始终落在正中。始终用深色外观；收起纯黑，展开后明细区域是深色毛玻璃。
 // 展开 / 收起用弹簧曲线过渡（控制器里 `withAnimation`），岛形尺寸与底角一起变化；没有常驻动画。
 
 struct UsageIslandRootView: View {
@@ -63,7 +63,7 @@ struct UsageIslandRootView: View {
         }
         .padding(.horizontal, UsageIslandShape.shoulder)
         .padding(.bottom, isExpanded ? 6 : 0)
-        .background(UsageIslandShape(bottomRadius: bottomRadius).fill(Color.black))
+        .background(islandBackground)
         .clipShape(UsageIslandShape(bottomRadius: bottomRadius))
         .contentShape(UsageIslandShape(bottomRadius: bottomRadius))
         .accessibilityElement(children: .contain)
@@ -71,6 +71,25 @@ struct UsageIslandRootView: View {
 
     private var bottomRadius: CGFloat {
         isExpanded ? 18 : min(12, geometry.barHeight / 2)
+    }
+
+    /// 收起时纯黑，与刘海、菜单栏无缝衔接。展开时明细区域换成深色毛玻璃：
+    /// 顶栏行保持纯黑，往下约 28pt 渐变到半透明深色，背后的桌面从明细区域透出来。
+    /// `.hudWindow` 材质始终是深色；`VisualEffectBackground` 默认 `.active`，App 不在前台时也保持模糊。
+    private var islandBackground: some View {
+        ZStack(alignment: .top) {
+            if isExpanded {
+                VisualEffectBackground(material: .hudWindow, blendingMode: .behindWindow)
+                    .transition(.opacity)
+            }
+            Color.black.opacity(isExpanded ? 0.42 : 1)
+            VStack(spacing: 0) {
+                Color.black.frame(height: geometry.barHeight)
+                LinearGradient(colors: [.black, .black.opacity(0)], startPoint: .top, endPoint: .bottom)
+                    .frame(height: 28)
+                Spacer(minLength: 0)
+            }
+        }
     }
 
     // MARK: Bar content
