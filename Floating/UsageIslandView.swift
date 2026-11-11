@@ -2,11 +2,11 @@ import SwiftUI
 
 // MARK: - UsageIslandRootView
 //
-// 见 docs/界面布局.md §2a。三种形态共用同一个窗口，窗口尺寸跟随内容：
-// - 收起：窄胶囊「今日 $… · …M」；
-// - 回合提示：胶囊换成「对话名  +$… · +…M」，约 4 秒后收回；
-// - 展开（悬停）：今日明细 + 最近回合。
-// 材质与悬浮窗 HUD 一致（窗背景 0.55 + `.popover` material + hairline）。不使用常驻动画。
+// 见 docs/界面布局.md §2a。灵动岛样式：黑色岛形贴住屏幕上沿，与刘海融为一体。
+// - 收起：刘海左侧「今日 $…」，右侧「…M」；无刘海屏幕在菜单栏正中显示同样的黑色岛形，中间用「·」分隔；
+// - 回合提示：左侧换成「对话名」，右侧换成「+$… · +…M」，约 4 秒后收回；
+// - 展开（悬停）：从岛形向下展开今日明细与最近回合。
+// 左右两翼等宽，刘海始终落在正中。始终用深色外观；不使用常驻动画。
 
 struct UsageIslandRootView: View {
     @Environment(AppState.self) private var appState
@@ -16,7 +16,7 @@ struct UsageIslandRootView: View {
     let actions: UsageIslandActions
 
     var body: some View {
-        content
+        island
             .fixedSize()
             .background {
                 GeometryReader { proxy in
@@ -26,36 +26,114 @@ struct UsageIslandRootView: View {
             .onPreferenceChange(UsageIslandSizeKey.self) { size in
                 actions.sizeChanged(size)
             }
+            .environment(\.colorScheme, .dark)
+    }
+
+    private var geometry: UsageIslandGeometry { model.geometry }
+    private var isExpanded: Bool { model.mode == .expanded }
+
+    private var island: some View {
+        VStack(spacing: 0) {
+            UsageIslandBar(geometry: geometry, left: { left }, right: { right })
+                .contentShape(Rectangle())
+                .islandDragAndTap(actions: actions, onTap: barTapped)
+                .help(barHelp)
+            if isExpanded {
+                UsageIslandExpandedView(
+                    summary: summary,
+                    updatedAt: appState.usageService.lastScanAt,
+                    recentTurns: tracker.recentTurns,
+                    showsTurns: settings.usageIslandTurnNotices,
+                    message: model.message,
+                    actions: actions
+                )
+            }
+        }
+        .padding(.horizontal, UsageIslandShape.shoulder)
+        .padding(.bottom, isExpanded ? 6 : 0)
+        .background(
+            UsageIslandShape(bottomRadius: isExpanded ? 18 : min(12, geometry.barHeight / 2))
+                .fill(Color.black)
+        )
+        .contentShape(UsageIslandShape(bottomRadius: isExpanded ? 18 : min(12, geometry.barHeight / 2)))
+        .accessibilityElement(children: .contain)
+    }
+
+    // MARK: Bar content
+
+    private var notice: CodexTurnRecord? {
+        guard !isExpanded, let first = model.currentNotice else { return nil }
+        return tracker.recentTurns.first { $0.id == first.id } ?? first
     }
 
     @ViewBuilder
-    private var content: some View {
-        switch model.mode {
-        case .expanded:
-            UsageIslandExpandedView(
-                summary: summary,
-                updatedAt: appState.usageService.lastScanAt,
-                recentTurns: tracker.recentTurns,
-                showsTurns: settings.usageIslandTurnNotices,
-                message: model.message,
-                actions: actions
-            )
-        case .collapsed:
-            if let notice = model.currentNotice {
-                UsageIslandNoticeView(
-                    turn: latest(notice),
-                    remaining: model.queue.count - 1 + model.skippedNotices,
-                    actions: actions
+    private var left: some View {
+        if let message = model.message, !isExpanded {
+            HStack(spacing: 5) {
+                Image(systemName: "exclamationmark.circle").foregroundStyle(.orange)
+                Text(message).foregroundStyle(.secondary).lineLimit(1)
+            }
+        } else if let notice {
+            HStack(spacing: 6) {
+                ServiceTile(
+                    logoName: UsageApp.codex.logoName,
+                    fallback: "C",
+                    tint: UsageApp.codex.tintColor,
+                    size: 16,
+                    logoSize: 10,
+                    cornerRadius: 4
                 )
-            } else {
-                UsageIslandCapsuleView(summary: summary, message: model.message, actions: actions)
+                Text(UsageIslandTurnText.title(notice))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .frame(maxWidth: 150, alignment: .leading)
+            }
+        } else {
+            HStack(spacing: 5) {
+                Text(tr("Today", "今日")).foregroundStyle(.secondary)
+                Text(UsageIslandFormat.cost(summary.total.costUSD) + (summary.costIncomplete ? "+" : ""))
+                    .monospacedDigit()
             }
         }
     }
 
-    /// 提示弹出后账本还可能补记，显示时取最新值。
-    private func latest(_ turn: CodexTurnRecord) -> CodexTurnRecord {
-        tracker.recentTurns.first { $0.id == turn.id } ?? turn
+    @ViewBuilder
+    private var right: some View {
+        if model.message != nil, !isExpanded {
+            EmptyView()
+        } else if let notice {
+            HStack(spacing: 6) {
+                UsageIslandTurnAmount(turn: notice)
+                let remaining = model.queue.count - 1 + model.skippedNotices
+                if remaining > 0 {
+                    Button(action: actions.expand) {
+                        Text(tr("+\(remaining)", "另有 \(remaining) 轮"))
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .help(tr("Show all", "展开查看"))
+                }
+            }
+        } else {
+            Text(UsageIslandFormat.tokens(summary.total.totalTokens))
+                .monospacedDigit()
+        }
+    }
+
+    private func barTapped() {
+        if let notice {
+            actions.openTurn(notice)
+        } else {
+            actions.openStatistics()
+        }
+    }
+
+    private var barHelp: String {
+        if notice != nil { return tr("Open this conversation in Codex", "在 Codex 中打开对话") }
+        return geometry.hasNotch
+            ? tr("Click to open Statistics", "点击打开统计")
+            : tr("Click to open Statistics. Drag to move.", "点击打开统计，拖动可左右移动")
     }
 
     /// 只在聚合器版本、可见服务或日期变化时重算。
@@ -89,33 +167,37 @@ private struct UsageIslandSizeKey: PreferenceKey {
     }
 }
 
-// MARK: - 背景
+// MARK: - 岛形
 
-private struct UsageIslandBackground: ViewModifier {
-    let cornerRadius: CGFloat
+/// 顶边平直贴住屏幕上沿，两侧顶角向外弯出「肩」与菜单栏衔接，底边圆角。与刘海的外形一致。
+struct UsageIslandShape: Shape {
+    /// 顶部外弯的宽度；内容需左右各让出这么多。
+    static let shoulder: CGFloat = 6
+    var bottomRadius: CGFloat
 
-    func body(content: Content) -> some View {
-        content
-            .background {
-                ZStack {
-                    Color(nsColor: .windowBackgroundColor).opacity(0.55)
-                    VisualEffectBackground(material: .popover, blendingMode: .behindWindow)
-                }
-            }
-            .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .strokeBorder(Color.primary.opacity(0.12), lineWidth: 0.5)
-            )
+    func path(in rect: CGRect) -> Path {
+        let s = Self.shoulder
+        let r = min(bottomRadius, (rect.width - 2 * s) / 2, rect.height)
+        var path = Path()
+        path.move(to: CGPoint(x: rect.minX, y: rect.minY))
+        path.addQuadCurve(to: CGPoint(x: rect.minX + s, y: rect.minY + s),
+                          control: CGPoint(x: rect.minX + s, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.minX + s, y: rect.maxY - r))
+        path.addQuadCurve(to: CGPoint(x: rect.minX + s + r, y: rect.maxY),
+                          control: CGPoint(x: rect.minX + s, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.maxX - s - r, y: rect.maxY))
+        path.addQuadCurve(to: CGPoint(x: rect.maxX - s, y: rect.maxY - r),
+                          control: CGPoint(x: rect.maxX - s, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.maxX - s, y: rect.minY + s))
+        path.addQuadCurve(to: CGPoint(x: rect.maxX, y: rect.minY),
+                          control: CGPoint(x: rect.maxX - s, y: rect.minY))
+        path.closeSubpath()
+        return path
     }
 }
 
 private extension View {
-    func islandBackground(cornerRadius: CGFloat) -> some View {
-        modifier(UsageIslandBackground(cornerRadius: cornerRadius))
-    }
-
-    /// 胶囊可横向拖动；没拖动时按点击处理。拖动用 4pt 阈值，避免点击误触拖动。
+    /// 无刘海时岛形可横向拖动；没拖动时按点击处理。拖动用 4pt 阈值，避免点击误触拖动。
     func islandDragAndTap(actions: UsageIslandActions, onTap: @escaping () -> Void) -> some View {
         gesture(
             DragGesture(minimumDistance: 4)
@@ -126,93 +208,55 @@ private extension View {
     }
 }
 
-// MARK: - 收起
+// MARK: - 顶栏行
 
-private struct UsageIslandCapsuleView: View {
-    let summary: UsageIslandTodaySummary
-    let message: String?
-    let actions: UsageIslandActions
-
-    static let height: CGFloat = 26
+/// 与菜单栏同高的一行：左翼 + 刘海（或「·」）+ 右翼。两翼按较宽的一侧等宽，刘海始终居中。
+private struct UsageIslandBar<Left: View, Right: View>: View {
+    let geometry: UsageIslandGeometry
+    @ViewBuilder let left: () -> Left
+    @ViewBuilder let right: () -> Right
+    @State private var wingWidth: CGFloat = 0
 
     var body: some View {
-        HStack(spacing: 6) {
-            if let message {
-                Image(systemName: "exclamationmark.circle")
-                    .foregroundStyle(.orange)
-                Text(message)
-                    .foregroundStyle(.secondary)
-            } else {
-                Text(tr("Today", "今日"))
-                    .foregroundStyle(.secondary)
-                Text(costText)
-                    .monospacedDigit()
-                Text("·")
-                    .foregroundStyle(.tertiary)
-                Text(UsageIslandFormat.tokens(summary.total.totalTokens))
-                    .monospacedDigit()
+        HStack(spacing: 0) {
+            left()
+                .fixedSize()
+                .background(measure)
+                .frame(minWidth: wingWidth, alignment: .trailing)
+                .padding(.leading, 10)
+            Group {
+                if geometry.hasNotch {
+                    Color.clear.frame(width: geometry.notchWidth + 16)
+                } else {
+                    Text("·").foregroundStyle(.tertiary).padding(.horizontal, 6)
+                }
             }
+            right()
+                .fixedSize()
+                .background(measure)
+                .frame(minWidth: wingWidth, alignment: .leading)
+                .padding(.trailing, 10)
         }
-        .font(.system(size: 12, weight: .semibold))
+        .font(.system(size: geometry.barHeight > 26 ? 13 : 12, weight: .semibold))
+        .foregroundStyle(.white)
         .lineLimit(1)
-        .padding(.horizontal, 12)
-        .frame(height: Self.height)
-        .frame(minWidth: 120)
-        .islandBackground(cornerRadius: Self.height / 2)
-        .contentShape(Capsule())
-        .islandDragAndTap(actions: actions, onTap: actions.openStatistics)
-        .help(tr("Click to open Statistics. Drag to move.", "点击打开统计，拖动可左右移动"))
-        .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(.isButton)
+        .frame(height: geometry.barHeight)
+        .onPreferenceChange(UsageIslandWingKey.self) { width in
+            if abs(width - wingWidth) > 0.5 { wingWidth = width }
+        }
     }
 
-    /// 有未定价用量时金额只是已知部分，加「+」提示不完整，展开面板里有明确说明。
-    private var costText: String {
-        UsageIslandFormat.cost(summary.total.costUSD) + (summary.costIncomplete ? "+" : "")
+    private var measure: some View {
+        GeometryReader { proxy in
+            Color.clear.preference(key: UsageIslandWingKey.self, value: proxy.size.width)
+        }
     }
 }
 
-// MARK: - 回合提示
-
-private struct UsageIslandNoticeView: View {
-    let turn: CodexTurnRecord
-    let remaining: Int
-    let actions: UsageIslandActions
-
-    var body: some View {
-        HStack(spacing: 8) {
-            ServiceTile(
-                logoName: UsageApp.codex.logoName,
-                fallback: "C",
-                tint: UsageApp.codex.tintColor,
-                size: 16,
-                logoSize: 10,
-                cornerRadius: 4
-            )
-            Text(UsageIslandTurnText.title(turn))
-                .font(.system(size: 12, weight: .semibold))
-                .lineLimit(1)
-                .truncationMode(.tail)
-                .frame(maxWidth: 220, alignment: .leading)
-            UsageIslandTurnAmount(turn: turn)
-            if remaining > 0 {
-                Button(action: actions.expand) {
-                    Text(tr("+\(remaining) more", "另有 \(remaining) 轮"))
-                        .font(.system(size: 11))
-                        .foregroundStyle(.secondary)
-                }
-                .buttonStyle(.plain)
-                .help(tr("Show all", "展开查看"))
-            }
-        }
-        .padding(.horizontal, 10)
-        .frame(height: 30)
-        .islandBackground(cornerRadius: 15)
-        .contentShape(Capsule())
-        .islandDragAndTap(actions: actions) { actions.openTurn(turn) }
-        .help(tr("Open this conversation in Codex", "在 Codex 中打开对话"))
-        .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(.isButton)
+private struct UsageIslandWingKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
     }
 }
 
@@ -242,11 +286,10 @@ private struct UsageIslandTurnAmount: View {
                         .foregroundStyle(.secondary)
                         .padding(.horizontal, 5)
                         .padding(.vertical, 1)
-                        .background(Capsule().fill(Color.primary.opacity(0.08)))
+                        .background(Capsule().fill(Color.white.opacity(0.14)))
                 }
             }
         }
-        .font(.system(size: 12, weight: .medium))
         .lineLimit(1)
         .fixedSize()
         .help(UsageIslandTurnText.detail(turn))
@@ -299,12 +342,12 @@ private struct UsageIslandExpandedView: View {
     let message: String?
     let actions: UsageIslandActions
 
-    static let width: CGFloat = 320
+    static let width: CGFloat = 340
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             header
-            Divider().padding(.horizontal, 14)
+            divider
             VStack(alignment: .leading, spacing: 10) {
                 ForEach(summary.rows) { row in
                     UsageIslandAppRow(row: row)
@@ -322,15 +365,22 @@ private struct UsageIslandExpandedView: View {
             .padding(.vertical, 10)
 
             if showsTurns {
-                Divider().padding(.horizontal, 14)
+                divider
                 turns
             }
 
-            Divider().padding(.horizontal, 14)
+            divider
             footer
         }
         .frame(width: Self.width, alignment: .leading)
-        .islandBackground(cornerRadius: 14)
+        .foregroundStyle(.white)
+    }
+
+    private var divider: some View {
+        Rectangle()
+            .fill(Color.white.opacity(0.12))
+            .frame(height: 0.5)
+            .padding(.horizontal, 14)
     }
 
     private var header: some View {
@@ -391,12 +441,12 @@ private struct UsageIslandExpandedView: View {
                     Button { actions.openTurn(turn) } label: {
                         HStack(spacing: 8) {
                             Text(UsageIslandTurnText.title(turn))
-                                .font(.system(size: 12))
                                 .lineLimit(1)
                                 .truncationMode(.tail)
                             Spacer(minLength: 8)
                             UsageIslandTurnAmount(turn: turn)
                         }
+                        .font(.system(size: 12))
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
@@ -421,7 +471,8 @@ private struct UsageIslandExpandedView: View {
             .lineLimit(2)
             .fixedSize(horizontal: false, vertical: true)
             .padding(.horizontal, 14)
-            .padding(.vertical, 8)
+            .padding(.top, 8)
+            .padding(.bottom, 4)
     }
 }
 

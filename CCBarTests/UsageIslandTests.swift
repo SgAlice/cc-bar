@@ -57,35 +57,57 @@ final class UsageIslandTests: XCTestCase {
 
     // MARK: - 定位
 
-    func testLayoutStaysBelowMenuBarAndNotch() {
+    func testNotchScreenWrapsNotchAndIgnoresOffset() {
+        // 14 英寸 MacBook Pro：刘海两侧是菜单栏区域，刘海高 32pt。
         let screen = CGRect(x: 0, y: 0, width: 1512, height: 982)
-        let visible = CGRect(x: 0, y: 0, width: 1512, height: 945)
-        let frame = UsageIslandLayout.frame(
-            contentSize: CGSize(width: 180, height: 26),
-            screenFrame: screen, visibleFrame: visible, safeAreaTop: 32, offset: 0
+        let visible = CGRect(x: 0, y: 0, width: 1512, height: 950)
+        let left = CGRect(x: 0, y: 950, width: 661, height: 32)
+        let right = CGRect(x: 851, y: 950, width: 661, height: 32)
+        let geometry = UsageIslandLayout.geometry(
+            screenFrame: screen, visibleFrame: visible, safeAreaTop: 32, auxiliaryLeft: left, auxiliaryRight: right
         )
-        XCTAssertEqual(frame.maxY, 945 - UsageIslandLayout.topGap)
-        XCTAssertEqual(frame.midX, 756)
+        XCTAssertEqual(geometry.notchWidth, 190)
+        XCTAssertEqual(geometry.barHeight, 32)
+        XCTAssertTrue(geometry.hasNotch)
 
-        // 菜单栏自动隐藏：visibleFrame 顶到屏幕边，仍要避开刘海。
-        let autoHidden = UsageIslandLayout.frame(
-            contentSize: CGSize(width: 180, height: 26),
-            screenFrame: screen, visibleFrame: screen, safeAreaTop: 32, offset: 0
+        let center = UsageIslandLayout.centerX(
+            screenFrame: screen, auxiliaryLeft: left, auxiliaryRight: right, geometry: geometry, offset: 0.3
         )
-        XCTAssertEqual(autoHidden.maxY, 982 - 32 - UsageIslandLayout.topGap)
+        XCTAssertEqual(center, 756, "有刘海时对准刘海中心，不受偏移影响")
+        let frame = UsageIslandLayout.frame(contentSize: CGSize(width: 400, height: 32), screenFrame: screen, centerX: center)
+        XCTAssertEqual(frame.maxY, screen.maxY, "贴住屏幕上沿")
+        XCTAssertEqual(frame.midX, 756)
     }
 
-    func testLayoutClampsOffsetInsideScreenAndRoundTrips() {
+    func testScreenWithoutNotchUsesMenuBarHeightAndOffset() {
         let screen = CGRect(x: 1512, y: 0, width: 1920, height: 1080)
-        let visible = CGRect(x: 1512, y: 0, width: 1920, height: 1055)
-        let size = CGSize(width: 320, height: 200)
-        let farRight = UsageIslandLayout.frame(contentSize: size, screenFrame: screen, visibleFrame: visible,
-                                               safeAreaTop: 0, offset: 0.5)
-        XCTAssertEqual(farRight.maxX, screen.maxX - UsageIslandLayout.sideMargin)
+        let visible = CGRect(x: 1512, y: 0, width: 1920, height: 1050)
+        let geometry = UsageIslandLayout.geometry(
+            screenFrame: screen, visibleFrame: visible, safeAreaTop: 0, auxiliaryLeft: nil, auxiliaryRight: nil
+        )
+        XCTAssertFalse(geometry.hasNotch)
+        XCTAssertEqual(geometry.barHeight, 30)
 
-        let shifted = UsageIslandLayout.frame(contentSize: CGSize(width: 180, height: 26), screenFrame: screen,
-                                              visibleFrame: visible, safeAreaTop: 0, offset: 0.2)
-        XCTAssertEqual(UsageIslandLayout.offset(forCenterX: shifted.midX, screenFrame: screen), 0.2, accuracy: 0.001)
+        // 菜单栏自动隐藏：读不到高度时用兜底值。
+        let hidden = UsageIslandLayout.geometry(
+            screenFrame: screen, visibleFrame: screen, safeAreaTop: 0, auxiliaryLeft: nil, auxiliaryRight: nil
+        )
+        XCTAssertEqual(hidden.barHeight, UsageIslandLayout.fallbackBarHeight)
+
+        let center = UsageIslandLayout.centerX(
+            screenFrame: screen, auxiliaryLeft: nil, auxiliaryRight: nil, geometry: geometry, offset: 0.2
+        )
+        let frame = UsageIslandLayout.frame(contentSize: CGSize(width: 180, height: 30), screenFrame: screen, centerX: center)
+        XCTAssertEqual(frame.maxY, screen.maxY)
+        XCTAssertEqual(UsageIslandLayout.offset(forCenterX: frame.midX, screenFrame: screen), 0.2, accuracy: 0.001)
+
+        // 偏到最右也留在屏幕内。
+        let farRight = UsageIslandLayout.frame(
+            contentSize: CGSize(width: 340, height: 300), screenFrame: screen,
+            centerX: UsageIslandLayout.centerX(screenFrame: screen, auxiliaryLeft: nil, auxiliaryRight: nil,
+                                               geometry: geometry, offset: 0.5)
+        )
+        XCTAssertEqual(farRight.maxX, screen.maxX - UsageIslandLayout.sideMargin)
     }
 
     // MARK: - Helpers

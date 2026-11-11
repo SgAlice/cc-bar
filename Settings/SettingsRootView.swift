@@ -404,8 +404,8 @@ struct SettingsRootView: View {
             PrefsRow(
                 label: "Show usage island",
                 chinese: "显示顶部用量胶囊",
-                desc: "Today's local usage at the top of the screen. Hover for details.",
-                chineseDesc: "在屏幕顶部显示今日本机用量，悬停查看明细"
+                desc: "Today's local usage in the menu bar, Dynamic Island style. Hover for details.",
+                chineseDesc: "以灵动岛样式在菜单栏显示今日本机用量，悬停查看明细"
             ) {
                 Toggle("", isOn: Binding(
                     get: { settings.usageIslandEnabled },
@@ -488,8 +488,8 @@ struct SettingsRootView: View {
                 PrefsRow(
                     label: "Position",
                     chinese: "位置",
-                    desc: "Drag the island to move it left or right.",
-                    chineseDesc: "拖动胶囊可左右移动"
+                    desc: "Drag to move on displays without a notch. On notched displays it stays around the notch.",
+                    chineseDesc: "无刘海的屏幕可拖动左右移动；有刘海时固定在刘海两侧"
                 ) {
                     Button(tr("Reset to Center", "恢复居中")) {
                         settings.usageIslandOffset = 0

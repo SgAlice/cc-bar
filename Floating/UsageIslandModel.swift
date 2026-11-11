@@ -86,35 +86,65 @@ nonisolated struct UsageIslandTodaySummary: Equatable, Sendable {
 
 // MARK: - 位置
 
-/// 胶囊窗口的位置计算（纯函数，便于测试）。
+/// 灵动岛所在屏幕的顶部几何。
+nonisolated struct UsageIslandGeometry: Equatable, Sendable {
+    /// 刘海宽度；无刘海为 0。
+    var notchWidth: CGFloat = 0
+    /// 顶栏行高度：有刘海取刘海高度，否则取菜单栏高度。
+    var barHeight: CGFloat = 24
+    /// 有刘海时岛形固定包住刘海，不能拖动。
+    var hasNotch: Bool { notchWidth > 0 }
+}
+
+/// 灵动岛窗口的位置计算（纯函数，便于测试）。
 nonisolated enum UsageIslandLayout {
-    /// 与菜单栏 / 刘海之间的间距。
-    static let topGap: CGFloat = 6
     /// 与屏幕左右边缘的最小间距。
     static let sideMargin: CGFloat = 8
+    /// 菜单栏自动隐藏时读不到高度，按系统菜单栏常见高度兜底。
+    static let fallbackBarHeight: CGFloat = 24
 
+    /// 顶栏几何。
     /// - Parameters:
-    ///   - screenFrame: `NSScreen.frame`。
-    ///   - visibleFrame: `NSScreen.visibleFrame`（已扣除菜单栏与 Dock）。
-    ///   - safeAreaTop: `NSScreen.safeAreaInsets.top`（刘海高度；菜单栏自动隐藏或全屏时仍要避开）。
-    ///   - offset: 中心相对屏幕中心的偏移，占屏幕宽度的比例。
-    static func frame(
-        contentSize: CGSize,
+    ///   - safeAreaTop: `NSScreen.safeAreaInsets.top`，有刘海时即刘海高度。
+    ///   - auxiliaryLeft / auxiliaryRight: `NSScreen.auxiliaryTopLeftArea / RightArea`，刘海两侧的菜单栏区域。
+    static func geometry(
         screenFrame: CGRect,
         visibleFrame: CGRect,
         safeAreaTop: CGFloat,
+        auxiliaryLeft: CGRect?,
+        auxiliaryRight: CGRect?
+    ) -> UsageIslandGeometry {
+        if safeAreaTop > 0, let left = auxiliaryLeft, let right = auxiliaryRight, right.minX > left.maxX {
+            return UsageIslandGeometry(notchWidth: right.minX - left.maxX, barHeight: safeAreaTop)
+        }
+        let menuBar = screenFrame.maxY - visibleFrame.maxY
+        return UsageIslandGeometry(notchWidth: 0, barHeight: menuBar > 0 ? menuBar : fallbackBarHeight)
+    }
+
+    /// 岛形中心：有刘海时对准刘海中心；否则屏幕中心加用户偏移（占屏幕宽度的比例）。
+    static func centerX(
+        screenFrame: CGRect,
+        auxiliaryLeft: CGRect?,
+        auxiliaryRight: CGRect?,
+        geometry: UsageIslandGeometry,
         offset: Double
-    ) -> CGRect {
-        let top = min(visibleFrame.maxY, screenFrame.maxY - safeAreaTop) - topGap
+    ) -> CGFloat {
+        if geometry.hasNotch, let left = auxiliaryLeft, let right = auxiliaryRight {
+            return (left.maxX + right.minX) / 2
+        }
         let clampedOffset = min(0.5, max(-0.5, offset))
-        let center = screenFrame.midX + CGFloat(clampedOffset) * screenFrame.width
-        var x = center - contentSize.width / 2
+        return screenFrame.midX + CGFloat(clampedOffset) * screenFrame.width
+    }
+
+    /// 窗口顶边贴住屏幕上沿，水平以 `centerX` 为中心并留在屏幕内。
+    static func frame(contentSize: CGSize, screenFrame: CGRect, centerX: CGFloat) -> CGRect {
+        var x = centerX - contentSize.width / 2
         let minX = screenFrame.minX + sideMargin
         let maxX = screenFrame.maxX - sideMargin - contentSize.width
         x = maxX < minX ? screenFrame.midX - contentSize.width / 2 : min(max(x, minX), maxX)
         return CGRect(
             x: x.rounded(),
-            y: (top - contentSize.height).rounded(),
+            y: screenFrame.maxY - contentSize.height,
             width: contentSize.width,
             height: contentSize.height
         )
@@ -146,6 +176,8 @@ final class UsageIslandModel {
     var message: String?
     /// 跨午夜时递增，让今日汇总按新的一天重算。
     var dayToken = 0
+    /// 当前屏幕的顶部几何（刘海宽度、菜单栏高度）。
+    var geometry = UsageIslandGeometry()
 
     var currentNotice: CodexTurnRecord? { queue.first }
 

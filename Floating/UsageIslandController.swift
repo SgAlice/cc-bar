@@ -1,8 +1,8 @@
 import AppKit
 import SwiftUI
 
-/// 顶部用量胶囊的窗口。与悬浮窗 HUD 一样不抢焦点、跨 Space 与全屏可见，
-/// 但不允许按背景拖动：位置只能横向调整，由胶囊自己的拖动手势处理。
+/// 灵动岛窗口。贴住屏幕上沿、层级在菜单栏之上（与刘海融为一体）；不抢焦点、跨 Space 与全屏可见。
+/// 不允许按背景拖动：无刘海时只能横向调整，由岛形自己的拖动手势处理。
 final class UsageIslandPanel: NSPanel {
     init(contentRect: NSRect) {
         super.init(
@@ -12,9 +12,12 @@ final class UsageIslandPanel: NSPanel {
             defer: false
         )
         isFloatingPanel = true
-        level = .floating
+        // 菜单栏窗口在 `.mainMenu`；岛形要盖在菜单栏上才能贴住刘海，取 `.statusBar`。
+        // 菜单栏展开的下拉菜单层级更高，仍会显示在岛形之上。
+        level = .statusBar
         hidesOnDeactivate = false
-        hasShadow = true
+        // 黑色岛形与刘海相接，系统阴影会在屏幕上沿画出一道边，关闭。
+        hasShadow = false
         isOpaque = false
         backgroundColor = .clear
         isMovableByWindowBackground = false
@@ -25,9 +28,14 @@ final class UsageIslandPanel: NSPanel {
 
     override var canBecomeKey: Bool { false }
     override var canBecomeMain: Bool { false }
+
+    /// 系统默认会把窗口挤出菜单栏区域；岛形必须贴住屏幕上沿，不做约束。
+    override func constrainFrameRect(_ frameRect: NSRect, to screen: NSScreen?) -> NSRect {
+        frameRect
+    }
 }
 
-/// 胶囊专用 hosting view。
+/// 灵动岛专用 hosting view。
 ///
 /// 与 HUD 的 `DraggableHostingView` 相反：不接管 hitTest / mouseDown，SwiftUI 的点击与拖动手势照常工作，
 /// 拖动、点击、按钮由视图自己划分区域。这里只补三件事：
@@ -207,14 +215,26 @@ final class UsageIslandController: NSObject {
 
     private func layout() {
         guard let panel, drag == nil, let screen = targetScreen() else { return }
-        let size = contentSize.width > 1 ? contentSize : CGSize(width: 160, height: 26)
-        let frame = UsageIslandLayout.frame(
-            contentSize: size,
+        let auxLeft = screen.auxiliaryTopLeftArea
+        let auxRight = screen.auxiliaryTopRightArea
+        let geometry = UsageIslandLayout.geometry(
             screenFrame: screen.frame,
             visibleFrame: screen.visibleFrame,
             safeAreaTop: screen.safeAreaInsets.top,
+            auxiliaryLeft: auxLeft,
+            auxiliaryRight: auxRight
+        )
+        // 几何变化会让内容重新布局，尺寸回报后再进来一次定位。
+        if model.geometry != geometry { model.geometry = geometry }
+        let size = contentSize.width > 1 ? contentSize : CGSize(width: 160, height: geometry.barHeight)
+        let centerX = UsageIslandLayout.centerX(
+            screenFrame: screen.frame,
+            auxiliaryLeft: auxLeft,
+            auxiliaryRight: auxRight,
+            geometry: geometry,
             offset: SettingsStore.shared.usageIslandOffset
         )
+        let frame = UsageIslandLayout.frame(contentSize: size, screenFrame: screen.frame, centerX: centerX)
         if panel.frame != frame { panel.setFrame(frame, display: true) }
     }
 
@@ -328,7 +348,8 @@ final class UsageIslandController: NSObject {
     // MARK: Drag
 
     private func dragChanged() {
-        guard let panel else { return }
+        // 有刘海时岛形固定包住刘海。
+        guard let panel, !model.geometry.hasNotch else { return }
         hoverTask?.cancel()
         dismissTask?.cancel()
         let mouseX = NSEvent.mouseLocation.x
