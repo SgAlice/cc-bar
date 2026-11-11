@@ -287,6 +287,10 @@ final class SettingsStore {
     var usageIslandTurnNotices: Bool { didSet { defaults.set(usageIslandTurnNotices, forKey: Keys.usageIslandTurnNotices) } }
     /// 平时隐藏，只在回合完成时出现。
     var usageIslandAutoHide: Bool { didSet { defaults.set(usageIslandAutoHide, forKey: Keys.usageIslandAutoHide) } }
+    /// 所在屏幕有 App 或视频全屏时隐藏（默认开）。
+    var usageIslandHideInFullScreen: Bool {
+        didSet { defaults.set(usageIslandHideInFullScreen, forKey: Keys.usageIslandHideInFullScreen) }
+    }
     /// 显示在哪块屏幕：`CGDirectDisplayID` 的十进制字符串；空串表示主显示器（菜单栏所在屏幕）。
     var usageIslandDisplayID: String { didSet { defaults.set(usageIslandDisplayID, forKey: Keys.usageIslandDisplayID) } }
     /// 水平位置：胶囊中心相对屏幕中心的偏移，按屏幕宽度的比例保存（-0.5…0.5），换屏或改分辨率后仍在相对位置。
@@ -436,6 +440,7 @@ final class SettingsStore {
         usageIslandEnabled = defaults.object(forKey: Keys.usageIslandEnabled) as? Bool ?? false
         usageIslandTurnNotices = defaults.object(forKey: Keys.usageIslandTurnNotices) as? Bool ?? true
         usageIslandAutoHide = defaults.object(forKey: Keys.usageIslandAutoHide) as? Bool ?? false
+        usageIslandHideInFullScreen = defaults.object(forKey: Keys.usageIslandHideInFullScreen) as? Bool ?? true
         usageIslandDisplayID = defaults.string(forKey: Keys.usageIslandDisplayID) ?? ""
         usageIslandOffset = min(0.5, max(-0.5, defaults.object(forKey: Keys.usageIslandOffset) as? Double ?? 0))
         // 刷新
@@ -850,6 +855,7 @@ final class SettingsStore {
         static let usageIslandEnabled = "ccbar.settings.usageIsland.enabled"
         static let usageIslandTurnNotices = "ccbar.settings.usageIsland.turnNotices"
         static let usageIslandAutoHide = "ccbar.settings.usageIsland.autoHide"
+        static let usageIslandHideInFullScreen = "ccbar.settings.usageIsland.hideInFullScreen"
         static let usageIslandDisplayID = "ccbar.settings.usageIsland.displayID"
         static let usageIslandOffset = "ccbar.settings.usageIsland.offset"
         static let quotaInterval = "ccbar.settings.quotaInterval"

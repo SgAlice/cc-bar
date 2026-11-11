@@ -458,6 +458,24 @@ struct SettingsRootView: View {
                 }
                 InsetDivider()
                 PrefsRow(
+                    label: "Hide in full screen",
+                    chinese: "全屏时隐藏",
+                    desc: "Hides while an app or video is full screen; turns finished meanwhile go to Recent turns.",
+                    chineseDesc: "App 或视频全屏时隐藏，期间结束的回合不弹出，记在「最近的回合」里"
+                ) {
+                    Toggle("", isOn: Binding(
+                        get: { settings.usageIslandHideInFullScreen },
+                        set: { newValue in
+                            settings.usageIslandHideInFullScreen = newValue
+                            UsageIslandController.shared.refreshFullScreenState()
+                        }
+                    ))
+                    .labelsHidden()
+                    .toggleStyle(.switch)
+                    .tint(.green)
+                }
+                InsetDivider()
+                PrefsRow(
                     label: "Display",
                     chinese: "显示器"
                 ) {

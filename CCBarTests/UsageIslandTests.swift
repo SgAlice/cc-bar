@@ -110,6 +110,24 @@ final class UsageIslandTests: XCTestCase {
         XCTAssertEqual(farRight.maxX, screen.maxX - UsageIslandLayout.sideMargin)
     }
 
+    func testFullScreenDetectionMatchesWholeScreenOnly() {
+        // 主显示器 1512×982 在左，外接 1920×1080 在右，顶边对齐。
+        let primaryHeight: CGFloat = 982
+        let external = UsageIslandLayout.cgBounds(
+            of: CGRect(x: 1512, y: -98, width: 1920, height: 1080), primaryHeight: primaryHeight
+        )
+        XCTAssertEqual(external, CGRect(x: 1512, y: 0, width: 1920, height: 1080))
+
+        let fullScreenVideo = CGRect(x: 1512, y: 0, width: 1920, height: 1080)
+        let maximized = CGRect(x: 1512, y: 30, width: 1920, height: 1050)
+        let onOtherScreen = CGRect(x: 0, y: 0, width: 1512, height: 982)
+        XCTAssertTrue(UsageIslandLayout.isFullScreen(windowBounds: [maximized, fullScreenVideo], screenBounds: external))
+        XCTAssertFalse(UsageIslandLayout.isFullScreen(windowBounds: [maximized], screenBounds: external),
+                       "最大化窗口不盖住菜单栏，不算全屏")
+        XCTAssertFalse(UsageIslandLayout.isFullScreen(windowBounds: [onOtherScreen], screenBounds: external),
+                       "别的屏幕全屏不影响")
+    }
+
     // MARK: - Helpers
 
     private func bucket(

@@ -110,6 +110,9 @@ final class UsageIslandController: NSObject {
     private var refreshTask: Task<Void, Never>?
     private var lastUsageRefreshAt: Date?
     private var drag: (mouseX: CGFloat, frameX: CGFloat)?
+    /// 所在屏幕当前有 App 或视频全屏（且开启了「全屏时隐藏」）。
+    private var isFullScreenActive = false
+    private var fullScreenCheckTask: Task<Void, Never>?
     private var lastDragEndedAt: Date?
 
     /// 悬停多久后展开、离开多久后收回。
@@ -148,6 +151,7 @@ final class UsageIslandController: NSObject {
         }
         if panel == nil { buildPanel() }
         registerObservers()
+        checkFullScreen()
         updateVisibility()
         layout()
     }
@@ -287,7 +291,7 @@ final class UsageIslandController: NSObject {
     }
 
     private var shouldShowPanel: Bool {
-        guard SettingsStore.shared.usageIslandEnabled else { return false }
+        guard SettingsStore.shared.usageIslandEnabled, !isFullScreenActive else { return false }
         // 关掉回合提示后没有东西会让它出现，「平时隐藏」不生效。
         if !SettingsStore.shared.usageIslandAutoHide || !SettingsStore.shared.usageIslandTurnNotices { return true }
         return !model.queue.isEmpty || model.mode == .expanded || isHovering || model.message != nil
@@ -361,6 +365,8 @@ final class UsageIslandController: NSObject {
 
     private func enqueue(_ notices: [CodexTurnRecord]) {
         guard SettingsStore.shared.usageIslandEnabled, SettingsStore.shared.usageIslandTurnNotices else { return }
+        // 全屏时不弹提示，回合照样记进「最近的回合」。
+        guard !isFullScreenActive else { return }
         if model.mode == .expanded {
             // 展开面板的列表会直接显示新回合。
             return
@@ -541,11 +547,20 @@ final class UsageIslandController: NSObject {
         let center = NotificationCenter.default
         let workspace = NSWorkspace.shared.notificationCenter
         // 显示器接入 / 断开、分辨率与排列变化：重新按安全区域定位。
-        observe(center, NSApplication.didChangeScreenParametersNotification) { $0.layout() }
-        observe(workspace, NSWorkspace.activeSpaceDidChangeNotification) { $0.layout() }
+        observe(center, NSApplication.didChangeScreenParametersNotification) { controller in
+            controller.layout()
+            controller.scheduleFullScreenCheck()
+        }
+        // 进出全屏都会切换 Space；切换前台 App 也可能露出或盖住全屏窗口。
+        observe(workspace, NSWorkspace.activeSpaceDidChangeNotification) { controller in
+            controller.layout()
+            controller.scheduleFullScreenCheck()
+        }
+        observe(workspace, NSWorkspace.didActivateApplicationNotification) { $0.scheduleFullScreenCheck() }
         // 唤醒：FSEvents 可能在睡眠期间合并，补扫一次；屏幕排列也可能变了。
         observe(workspace, NSWorkspace.didWakeNotification) { controller in
             controller.layout()
+            controller.scheduleFullScreenCheck()
             CodexTurnTracker.shared.requestSweep()
         }
         // 跨午夜：今日累计归零。
@@ -564,6 +579,60 @@ final class UsageIslandController: NSObject {
             }
         }
         observers.append((center, token))
+    }
+
+    // MARK: Full screen
+
+    /// 立即检查一次；全屏有过渡动画，窗口要过一会儿才铺满，0.6 秒后再查一次。只在系统事件时触发，没有定时器。
+    private func scheduleFullScreenCheck() {
+        checkFullScreen()
+        fullScreenCheckTask?.cancel()
+        fullScreenCheckTask = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(600))
+            guard !Task.isCancelled else { return }
+            self?.checkFullScreen()
+        }
+    }
+
+    /// 设置页切换「全屏时隐藏」后调用。
+    func refreshFullScreenState() {
+        checkFullScreen()
+    }
+
+    private func checkFullScreen() {
+        let active = SettingsStore.shared.usageIslandEnabled
+            && SettingsStore.shared.usageIslandHideInFullScreen
+            && detectFullScreen()
+        guard active != isFullScreenActive else { return }
+        isFullScreenActive = active
+        if active {
+            // 进入全屏：收起并清掉排队的提示（都在「最近的回合」里），直接隐藏。
+            hoverTask?.cancel()
+            dismissTask?.cancel()
+            model.queue.removeAll()
+            model.skippedNotices = 0
+            model.mode = .collapsed
+        }
+        updateVisibility()
+        if !active { layout() }
+    }
+
+    /// 读所在屏幕上其他 App 的普通窗口位置（只用位置与层级，不读窗口内容，不需要屏幕录制权限）。
+    private func detectFullScreen() -> Bool {
+        guard let screen = targetScreen(), let primary = NSScreen.screens.first,
+              let info = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID)
+                as? [[String: Any]] else { return false }
+        let screenBounds = UsageIslandLayout.cgBounds(of: screen.frame, primaryHeight: primary.frame.height)
+        let ownPID = ProcessInfo.processInfo.processIdentifier
+        let bounds = info.compactMap { window -> CGRect? in
+            guard (window[kCGWindowLayer as String] as? NSNumber)?.intValue == 0,
+                  (window[kCGWindowOwnerPID as String] as? NSNumber)?.int32Value != ownPID,
+                  ((window[kCGWindowAlpha as String] as? NSNumber)?.doubleValue ?? 1) > 0,
+                  let dictionary = window[kCGWindowBounds as String] as? NSDictionary,
+                  let rect = CGRect(dictionaryRepresentation: dictionary) else { return nil }
+            return rect
+        }
+        return UsageIslandLayout.isFullScreen(windowBounds: bounds, screenBounds: screenBounds)
     }
 
     private func unregisterObservers() {

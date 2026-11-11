@@ -151,6 +151,24 @@ nonisolated enum UsageIslandLayout {
         )
     }
 
+    /// 屏幕上有其他 App 的普通窗口（layer 0）正好铺满整块屏幕（连菜单栏一起盖住）即视为全屏：
+    /// App 全屏、网页 / 视频全屏都属于这种情况；最大化窗口只铺满 `visibleFrame`，不算。
+    /// - Parameters:
+    ///   - windowBounds: `CGWindowListCopyWindowInfo` 的 `kCGWindowBounds`（左上角原点的全局坐标）。
+    ///   - screenBounds: 同一坐标系下的屏幕范围（见 `cgBounds(of:primaryHeight:)`）。
+    static func isFullScreen(windowBounds: [CGRect], screenBounds: CGRect) -> Bool {
+        windowBounds.contains { bounds in
+            abs(bounds.minX - screenBounds.minX) <= 1 && abs(bounds.minY - screenBounds.minY) <= 1
+                && abs(bounds.width - screenBounds.width) <= 1 && abs(bounds.height - screenBounds.height) <= 1
+        }
+    }
+
+    /// `NSScreen.frame`（左下角原点）换算到 CGWindow 的左上角原点坐标；`primaryHeight` 是主显示器高度。
+    static func cgBounds(of screenFrame: CGRect, primaryHeight: CGFloat) -> CGRect {
+        CGRect(x: screenFrame.minX, y: primaryHeight - screenFrame.maxY,
+               width: screenFrame.width, height: screenFrame.height)
+    }
+
     /// 拖动结束后，把窗口中心换算回比例偏移。
     static func offset(forCenterX centerX: CGFloat, screenFrame: CGRect) -> Double {
         guard screenFrame.width > 0 else { return 0 }
