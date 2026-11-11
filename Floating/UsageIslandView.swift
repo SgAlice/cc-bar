@@ -147,9 +147,46 @@ struct UsageIslandRootView: View {
             .id(notice.id)
             .transition(.opacity)
         } else {
-            Text(UsageIslandFormat.tokens(summary.total.totalTokens))
-                .monospacedDigit()
+            HStack(spacing: 5) {
+                Text(UsageIslandFormat.tokens(summary.total.totalTokens))
+                    .monospacedDigit()
+                // 菜单栏的额度百分比合并到这里（同一规则与设置），不带服务图标。
+                ForEach(quotaItems) { item in
+                    Text("·").foregroundStyle(.tertiary)
+                    Text(item.text)
+                        .monospacedDigit()
+                        .foregroundStyle(item.color)
+                }
+            }
         }
+    }
+
+    /// 与菜单栏同一来源：「菜单栏」开关打开的额度服务、「额度周期」设置。
+    private var quotaItems: [UsageIslandQuotaItem] {
+        let window = settings.menuBarWindow
+        return settings.orderedMenuBarProviders
+            .filter { settings.effectiveMenuBarVisibility(for: $0.app) }
+            .map { provider in
+                let snapshot = appState.quotaSnapshot(for: provider.app)
+                let remaining = snapshot.flatMap { snapshot in
+                    snapshot.isUnlimited == true
+                        ? nil
+                        : MenuBarQuotaSelection.limits(in: snapshot, choice: window).map(\.window.remainingPercent).min()
+                }
+                return UsageIslandQuotaItem(
+                    id: provider.app,
+                    text: MenuBarBadgeImage.pctText(snapshot, window: window),
+                    color: Self.quotaColor(remaining)
+                )
+            }
+    }
+
+    /// 黑底上中性的石墨灰看不清，正常档用白色；低于 20% 橙、用完红，与 `statusColor` 的分档一致。
+    private static func quotaColor(_ remaining: Double?) -> Color {
+        guard let remaining else { return .white }
+        if remaining <= 0 { return .red }
+        if remaining < 20 { return .orange }
+        return .white
     }
 
     private func barTapped() {
@@ -178,6 +215,12 @@ struct UsageIslandRootView: View {
         model.summaryCache = (key, value)
         return value
     }
+}
+
+private struct UsageIslandQuotaItem: Identifiable {
+    var id: QuotaApp
+    var text: String
+    var color: Color
 }
 
 /// 视图回调到控制器的入口。

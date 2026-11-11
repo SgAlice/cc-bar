@@ -8,7 +8,8 @@ struct MenuBarLabel: View {
         Image(nsImage: MenuBarBadgeImage.make(
             providers: visibleProviders,
             snapshots: snapshots,
-            window: SettingsStore.shared.menuBarWindow
+            window: SettingsStore.shared.menuBarWindow,
+            iconOnly: Self.quotaShownInIsland
         ))
         .fixedSize(horizontal: true, vertical: false)
         .accessibilityLabel(MenuBarBadgeImage.accessibilityLabel(
@@ -16,6 +17,13 @@ struct MenuBarLabel: View {
             snapshots: snapshots,
             window: SettingsStore.shared.menuBarWindow
         ))
+    }
+
+    /// 顶部用量胶囊常驻显示时，额度百分比已经合并进岛里，菜单栏只留一个图标作为弹出面板入口。
+    /// 「平时隐藏」生效时岛不常驻，菜单栏照常显示百分比。
+    static var quotaShownInIsland: Bool {
+        let settings = SettingsStore.shared
+        return settings.usageIslandEnabled && !(settings.usageIslandAutoHide && settings.usageIslandTurnNotices)
     }
 
     private var visibleProviders: [QuotaProviderDescriptor] {
@@ -55,16 +63,18 @@ enum MenuBarBadgeImage {
         weight: .regular
     )
 
+    /// - Parameter iconOnly: 只画第一个服务的图标、不带百分比（百分比显示在顶部用量胶囊里）。
     static func make(
         providers: [QuotaProviderDescriptor],
         snapshots: [QuotaApp: QuotaSnapshot],
-        window: MenuBarWindowChoice
+        window: MenuBarWindowChoice,
+        iconOnly: Bool = false
     ) -> NSImage {
-        let items = providers.map { provider in
+        let items = (iconOnly ? Array(providers.prefix(1)) : providers).map { provider in
             BadgeItem(
                 logo: provider.logoName,
                 fallback: provider.fallback,
-                text: pctText(snapshots[provider.app], window: window)
+                text: iconOnly ? "" : pctText(snapshots[provider.app], window: window)
             )
         }
 
@@ -126,7 +136,8 @@ enum MenuBarBadgeImage {
         ]
     }
 
-    private static func pctText(_ snap: QuotaSnapshot?, window: MenuBarWindowChoice) -> String {
+    /// 菜单栏的百分比文字（顶部用量胶囊复用，保证两处一致）。
+    static func pctText(_ snap: QuotaSnapshot?, window: MenuBarWindowChoice) -> String {
         guard let snap else { return "--" }
         if snap.isUnlimited == true { return "∞" }
         let limits = MenuBarQuotaSelection.limits(in: snap, choice: window)
