@@ -658,6 +658,8 @@ final class AppState {
         scheduler.suspendForTermination()
         UsageLogWatcher.shared.suspendForTermination()
         usageService.suspendForTermination()
+        // 顶部用量胶囊的回合账本很小，退出前直接落盘，不参与用量快照的终止流程。
+        await UsageIslandController.shared.prepareForTermination()
         let clock = ContinuousClock()
         let deadline = clock.now.advanced(by: .seconds(30))
         do {

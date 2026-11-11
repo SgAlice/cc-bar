@@ -281,6 +281,17 @@ final class SettingsStore {
         set { setProviderShownInFloatingHUD(newValue, for: .antigravity) }
     }
 
+    // 顶部用量胶囊（见 Floating/UsageIslandController.swift）
+    var usageIslandEnabled: Bool { didSet { defaults.set(usageIslandEnabled, forKey: Keys.usageIslandEnabled) } }
+    /// Codex 每轮结束后的增量提示。
+    var usageIslandTurnNotices: Bool { didSet { defaults.set(usageIslandTurnNotices, forKey: Keys.usageIslandTurnNotices) } }
+    /// 平时隐藏，只在回合完成时出现。
+    var usageIslandAutoHide: Bool { didSet { defaults.set(usageIslandAutoHide, forKey: Keys.usageIslandAutoHide) } }
+    /// 显示在哪块屏幕：`CGDirectDisplayID` 的十进制字符串；空串表示主显示器（菜单栏所在屏幕）。
+    var usageIslandDisplayID: String { didSet { defaults.set(usageIslandDisplayID, forKey: Keys.usageIslandDisplayID) } }
+    /// 水平位置：胶囊中心相对屏幕中心的偏移，按屏幕宽度的比例保存（-0.5…0.5），换屏或改分辨率后仍在相对位置。
+    var usageIslandOffset: Double { didSet { defaults.set(usageIslandOffset, forKey: Keys.usageIslandOffset) } }
+
     // 刷新
     var quotaInterval: QuotaIntervalChoice { didSet { defaults.set(quotaInterval.rawValue, forKey: Keys.quotaInterval) } }
     var usageInterval: UsageIntervalChoice { didSet { defaults.set(usageInterval.rawValue, forKey: Keys.usageInterval) } }
@@ -422,6 +433,11 @@ final class SettingsStore {
         }
         // 悬浮窗
         floatingEnabled = defaults.object(forKey: Keys.floatingEnabled) as? Bool ?? false
+        usageIslandEnabled = defaults.object(forKey: Keys.usageIslandEnabled) as? Bool ?? false
+        usageIslandTurnNotices = defaults.object(forKey: Keys.usageIslandTurnNotices) as? Bool ?? true
+        usageIslandAutoHide = defaults.object(forKey: Keys.usageIslandAutoHide) as? Bool ?? false
+        usageIslandDisplayID = defaults.string(forKey: Keys.usageIslandDisplayID) ?? ""
+        usageIslandOffset = min(0.5, max(-0.5, defaults.object(forKey: Keys.usageIslandOffset) as? Double ?? 0))
         // 刷新
         let qiRaw = defaults.string(forKey: Keys.quotaInterval) ?? QuotaIntervalChoice.m2.rawValue
         quotaInterval = QuotaIntervalChoice(rawValue: qiRaw) ?? .m2
@@ -831,6 +847,11 @@ final class SettingsStore {
         static let floatingEnabled = "ccbar.settings.floatingEnabled"
         static let floatingShowCodex = "ccbar.settings.floatingShowCodex"
         static let floatingShowClaude = "ccbar.settings.floatingShowClaude"
+        static let usageIslandEnabled = "ccbar.settings.usageIsland.enabled"
+        static let usageIslandTurnNotices = "ccbar.settings.usageIsland.turnNotices"
+        static let usageIslandAutoHide = "ccbar.settings.usageIsland.autoHide"
+        static let usageIslandDisplayID = "ccbar.settings.usageIsland.displayID"
+        static let usageIslandOffset = "ccbar.settings.usageIsland.offset"
         static let quotaInterval = "ccbar.settings.quotaInterval"
         static let usageInterval = "ccbar.settings.usageInterval"
         static let resetTimeDisplay = "ccbar.settings.resetTimeDisplay"

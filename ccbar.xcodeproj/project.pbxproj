@@ -81,6 +81,8 @@
 		49C1BF04000000000001AABB /* ScannerIncrementalTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49C1BF04000000000001AAAA /* ScannerIncrementalTests.swift */; };
 		49C1BF05000000000001AABB /* UsageEquivalenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49C1BF05000000000001AAAA /* UsageEquivalenceTests.swift */; };
 		49C1BF30000000000001AABB /* StatsOverviewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49C1BF30000000000001AAAA /* StatsOverviewModelTests.swift */; };
+		4ACE0007000000000001AABB /* UsageIslandTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4ACE0007000000000001AAAA /* UsageIslandTests.swift */; };
+		4ACE0006000000000001AABB /* CodexTurnLedgerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4ACE0006000000000001AAAA /* CodexTurnLedgerTests.swift */; };
 		49C1B131000000000001AABB /* Scheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49C1B131000000000001AAAA /* Scheduler.swift */; };
 		49C1B132000000000001AABB /* L10n.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49C1B132000000000001AAAA /* L10n.swift */; };
 		49C1BD01000000000001AABB /* AppLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49C1BD01000000000001AAAA /* AppLog.swift */; };
@@ -112,6 +114,8 @@
 		49C1B155000000000001AABB /* UsageAggregator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49C1B155000000000001AAAA /* UsageAggregator.swift */; };
 		49C1B156000000000001AABB /* UsageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49C1B156000000000001AAAA /* UsageService.swift */; };
 		49C1B197000000000001AABB /* UsageLogWatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49C1B197000000000001AAAA /* UsageLogWatcher.swift */; };
+		4ACE0002000000000001AABB /* CodexTurnTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4ACE0002000000000001AAAA /* CodexTurnTracker.swift */; };
+		4ACE0001000000000001AABB /* CodexTurnLedger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4ACE0001000000000001AAAA /* CodexTurnLedger.swift */; };
 		49C1BA11000000000001AABB /* CycleUsage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49C1BA11000000000001AAAA /* CycleUsage.swift */; };
 		49C1B157000000000001AABB /* PricingCatalogModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49C1B157000000000001AAAA /* PricingCatalogModels.swift */; };
 		49C1B158000000000001AABB /* LiteLLMPricingDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49C1B158000000000001AAAA /* LiteLLMPricingDecoder.swift */; };
@@ -131,6 +135,9 @@
 		49C1B167000000000001AABB /* ConversationTitleIndex.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49C1B167000000000001AAAA /* ConversationTitleIndex.swift */; };
 		49C1B168000000000001AABB /* ConversationRollupCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49C1B168000000000001AAAA /* ConversationRollupCache.swift */; };
 		49C1B171000000000001AABB /* FloatingPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49C1B171000000000001AAAA /* FloatingPanel.swift */; };
+		4ACE0005000000000001AABB /* UsageIslandController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4ACE0005000000000001AAAA /* UsageIslandController.swift */; };
+		4ACE0004000000000001AABB /* UsageIslandView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4ACE0004000000000001AAAA /* UsageIslandView.swift */; };
+		4ACE0003000000000001AABB /* UsageIslandModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4ACE0003000000000001AAAA /* UsageIslandModel.swift */; };
 		49C1B172000000000001AABB /* FloatingContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49C1B172000000000001AAAA /* FloatingContentView.swift */; };
 		49C1B173000000000001AABB /* FloatingPanelController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49C1B173000000000001AAAA /* FloatingPanelController.swift */; };
 		49C1B181000000000001AABB /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49C1B181000000000001AAAA /* OnboardingView.swift */; };
@@ -223,6 +230,8 @@
 		49C1BF04000000000001AAAA /* ScannerIncrementalTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScannerIncrementalTests.swift; sourceTree = "<group>"; };
 		49C1BF05000000000001AAAA /* UsageEquivalenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageEquivalenceTests.swift; sourceTree = "<group>"; };
 		49C1BF30000000000001AAAA /* StatsOverviewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsOverviewModelTests.swift; sourceTree = "<group>"; };
+		4ACE0007000000000001AAAA /* UsageIslandTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageIslandTests.swift; sourceTree = "<group>"; };
+		4ACE0006000000000001AAAA /* CodexTurnLedgerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexTurnLedgerTests.swift; sourceTree = "<group>"; };
 		49C1B131000000000001AAAA /* Scheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Scheduler.swift; sourceTree = "<group>"; };
 		49C1B132000000000001AAAA /* L10n.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = L10n.swift; sourceTree = "<group>"; };
 		49C1BD01000000000001AAAA /* AppLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLog.swift; sourceTree = "<group>"; };
@@ -276,6 +285,8 @@
 		49C1B16A000000000001AAAA /* ModelProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelProvider.swift; sourceTree = "<group>"; };
 		49C1B156000000000001AAAA /* UsageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageService.swift; sourceTree = "<group>"; };
 		49C1B197000000000001AAAA /* UsageLogWatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageLogWatcher.swift; sourceTree = "<group>"; };
+		4ACE0002000000000001AAAA /* CodexTurnTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexTurnTracker.swift; sourceTree = "<group>"; };
+		4ACE0001000000000001AAAA /* CodexTurnLedger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexTurnLedger.swift; sourceTree = "<group>"; };
 		49C1BA11000000000001AAAA /* CycleUsage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CycleUsage.swift; sourceTree = "<group>"; };
 		49C1B157000000000001AAAA /* PricingCatalogModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PricingCatalogModels.swift; sourceTree = "<group>"; };
 		49C1B158000000000001AAAA /* LiteLLMPricingDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiteLLMPricingDecoder.swift; sourceTree = "<group>"; };
@@ -294,6 +305,9 @@
 		49C1B167000000000001AAAA /* ConversationTitleIndex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversationTitleIndex.swift; sourceTree = "<group>"; };
 		49C1B168000000000001AAAA /* ConversationRollupCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversationRollupCache.swift; sourceTree = "<group>"; };
 		49C1B171000000000001AAAA /* FloatingPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatingPanel.swift; sourceTree = "<group>"; };
+		4ACE0005000000000001AAAA /* UsageIslandController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageIslandController.swift; sourceTree = "<group>"; };
+		4ACE0004000000000001AAAA /* UsageIslandView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageIslandView.swift; sourceTree = "<group>"; };
+		4ACE0003000000000001AAAA /* UsageIslandModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageIslandModel.swift; sourceTree = "<group>"; };
 		49C1B172000000000001AAAA /* FloatingContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatingContentView.swift; sourceTree = "<group>"; };
 		49C1B173000000000001AAAA /* FloatingPanelController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatingPanelController.swift; sourceTree = "<group>"; };
 		49C1B181000000000001AAAA /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
@@ -548,6 +562,8 @@
 				49C1B156000000000001AAAA /* UsageService.swift */,
 				49C2AA05000000000001AAAA /* UsageHistoryConsistency.swift */,
 				49C1B197000000000001AAAA /* UsageLogWatcher.swift */,
+				4ACE0002000000000001AAAA /* CodexTurnTracker.swift */,
+				4ACE0001000000000001AAAA /* CodexTurnLedger.swift */,
 				49C1BA11000000000001AAAA /* CycleUsage.swift */,
 				49C1B165000000000001AAAA /* ConversationModels.swift */,
 				49C1B166000000000001AAAA /* ConversationAggregator.swift */,
@@ -576,6 +592,9 @@
 			isa = PBXGroup;
 			children = (
 				49C1B171000000000001AAAA /* FloatingPanel.swift */,
+				4ACE0005000000000001AAAA /* UsageIslandController.swift */,
+				4ACE0004000000000001AAAA /* UsageIslandView.swift */,
+				4ACE0003000000000001AAAA /* UsageIslandModel.swift */,
 				49C1B172000000000001AAAA /* FloatingContentView.swift */,
 				49C1B173000000000001AAAA /* FloatingPanelController.swift */,
 			);
@@ -605,6 +624,8 @@
 				49C1BF04000000000001AAAA /* ScannerIncrementalTests.swift */,
 				49C1BF05000000000001AAAA /* UsageEquivalenceTests.swift */,
 				49C1BF30000000000001AAAA /* StatsOverviewModelTests.swift */,
+				4ACE0007000000000001AAAA /* UsageIslandTests.swift */,
+				4ACE0006000000000001AAAA /* CodexTurnLedgerTests.swift */,
 				49C1BF07000000000001AAAA /* QuotaPersistenceCoordinatorTests.swift */,
 				49C1BD04000000000001AAAA /* RedactTests.swift */,
 				49C1B31000000000000FAAAA /* PiJSONLScannerTests.swift */,
@@ -855,6 +876,8 @@
 				49C1B156000000000001AABB /* UsageService.swift in Sources */,
 				49C2AA06000000000001AAAA /* UsageHistoryConsistency.swift in Sources */,
 				49C1B197000000000001AABB /* UsageLogWatcher.swift in Sources */,
+				4ACE0002000000000001AABB /* CodexTurnTracker.swift in Sources */,
+				4ACE0001000000000001AABB /* CodexTurnLedger.swift in Sources */,
 				49C1BA11000000000001AABB /* CycleUsage.swift in Sources */,
 				49C1B157000000000001AABB /* PricingCatalogModels.swift in Sources */,
 				49C1B158000000000001AABB /* LiteLLMPricingDecoder.swift in Sources */,
@@ -873,6 +896,9 @@
 				49C1B167000000000001AABB /* ConversationTitleIndex.swift in Sources */,
 				49C1B168000000000001AABB /* ConversationRollupCache.swift in Sources */,
 				49C1B171000000000001AABB /* FloatingPanel.swift in Sources */,
+				4ACE0005000000000001AABB /* UsageIslandController.swift in Sources */,
+				4ACE0004000000000001AABB /* UsageIslandView.swift in Sources */,
+				4ACE0003000000000001AABB /* UsageIslandModel.swift in Sources */,
 				49C1B172000000000001AABB /* FloatingContentView.swift in Sources */,
 				49C1B173000000000001AABB /* FloatingPanelController.swift in Sources */,
 				49C1B181000000000001AABB /* OnboardingView.swift in Sources */,
@@ -900,6 +926,8 @@
 				49C1BF04000000000001AABB /* ScannerIncrementalTests.swift in Sources */,
 				49C1BF05000000000001AABB /* UsageEquivalenceTests.swift in Sources */,
 				49C1BF30000000000001AABB /* StatsOverviewModelTests.swift in Sources */,
+				4ACE0007000000000001AABB /* UsageIslandTests.swift in Sources */,
+				4ACE0006000000000001AABB /* CodexTurnLedgerTests.swift in Sources */,
 				49C1BF07000000000001AABB /* QuotaPersistenceCoordinatorTests.swift in Sources */,
 				49C1BD04000000000001AABB /* RedactTests.swift in Sources */,
 				49C1BF09000000000001AABB /* UpdateCheckerTests.swift in Sources */,

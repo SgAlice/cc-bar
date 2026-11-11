@@ -84,6 +84,18 @@ private struct MenuBarLabelRoot: View {
                     openWindow(id: "main")
                 }
                 FloatingPanelController.shared.sync()
+                UsageIslandController.shared.attach(appState: appState)
+                UsageIslandController.shared.openStatisticsHandler = {
+                    appState.mainTab = .stats
+                    NSApp.activate(ignoringOtherApps: true)
+                    openWindow(id: "main")
+                }
+                UsageIslandController.shared.openSettingsHandler = {
+                    appState.mainTab = .settings
+                    NSApp.activate(ignoringOtherApps: true)
+                    openWindow(id: "main")
+                }
+                UsageIslandController.shared.sync()
             }
             .onChange(of: appState.shouldShowOnboarding) { _, show in
                 guard show else { return }

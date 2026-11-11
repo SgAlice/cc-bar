@@ -398,6 +398,109 @@ struct SettingsRootView: View {
         }
 
         PrefsGroup(
+            title: "Usage Island",
+            chinese: "顶部用量胶囊"
+        ) {
+            PrefsRow(
+                label: "Show usage island",
+                chinese: "显示顶部用量胶囊",
+                desc: "Today's local usage at the top of the screen. Hover for details.",
+                chineseDesc: "在屏幕顶部显示今日本机用量，悬停查看明细"
+            ) {
+                Toggle("", isOn: Binding(
+                    get: { settings.usageIslandEnabled },
+                    set: { newValue in
+                        settings.usageIslandEnabled = newValue
+                        UsageIslandController.shared.sync()
+                    }
+                ))
+                .labelsHidden()
+                .toggleStyle(.switch)
+                .tint(.green)
+            }
+            if settings.usageIslandEnabled {
+                InsetDivider()
+                PrefsRow(
+                    label: "Codex turn notices",
+                    chinese: "Codex 回合完成提示",
+                    desc: "Shows the conversation's usage after each turn. Reads Codex logs on this Mac.",
+                    chineseDesc: "每轮结束后显示该对话本轮的用量，读取本机 Codex 日志"
+                ) {
+                    Toggle("", isOn: Binding(
+                        get: { settings.usageIslandTurnNotices },
+                        set: { newValue in
+                            settings.usageIslandTurnNotices = newValue
+                            UsageIslandController.shared.sync()
+                        }
+                    ))
+                    .labelsHidden()
+                    .toggleStyle(.switch)
+                    .tint(.green)
+                }
+                InsetDivider()
+                PrefsRow(
+                    label: "Hide when idle",
+                    chinese: "平时隐藏",
+                    desc: "Appears only when a turn finishes.",
+                    chineseDesc: "只在回合完成时出现"
+                ) {
+                    Toggle("", isOn: Binding(
+                        get: { settings.usageIslandAutoHide },
+                        set: { newValue in
+                            settings.usageIslandAutoHide = newValue
+                            UsageIslandController.shared.sync()
+                        }
+                    ))
+                    .labelsHidden()
+                    .toggleStyle(.switch)
+                    .tint(.green)
+                    .disabled(!settings.usageIslandTurnNotices)
+                }
+                InsetDivider()
+                PrefsRow(
+                    label: "Display",
+                    chinese: "显示器"
+                ) {
+                    Picker("", selection: Binding(
+                        get: { settings.usageIslandDisplayID },
+                        set: { newValue in
+                            settings.usageIslandDisplayID = newValue
+                            UsageIslandController.shared.relayout()
+                        }
+                    )) {
+                        Text(tr("Main display", "主显示器")).tag("")
+                        if !settings.usageIslandDisplayID.isEmpty,
+                           !NSScreen.screens.contains(where: {
+                               UsageIslandController.displayID(of: $0) == settings.usageIslandDisplayID
+                           }) {
+                            // 选中的屏幕已断开：胶囊暂时显示在主显示器，重新接入后回到原屏幕。
+                            Text(tr("Disconnected display", "未连接的显示器")).tag(settings.usageIslandDisplayID)
+                        }
+                        ForEach(NSScreen.screens, id: \.self) { screen in
+                            Text(screen.localizedName).tag(UsageIslandController.displayID(of: screen))
+                        }
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
+                    .fixedSize()
+                }
+                InsetDivider()
+                PrefsRow(
+                    label: "Position",
+                    chinese: "位置",
+                    desc: "Drag the island to move it left or right.",
+                    chineseDesc: "拖动胶囊可左右移动"
+                ) {
+                    Button(tr("Reset to Center", "恢复居中")) {
+                        settings.usageIslandOffset = 0
+                        UsageIslandController.shared.relayout()
+                    }
+                    .disabled(settings.usageIslandOffset == 0)
+                }
+            }
+        }
+
+        PrefsGroup(
             title: "Statistics",
             chinese: "统计"
         ) {

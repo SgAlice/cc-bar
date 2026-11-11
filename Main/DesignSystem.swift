@@ -31,9 +31,14 @@ enum PrivacyDisplay {
     }
 
     static func conversation(_ info: ConversationInfo) -> String {
+        conversation(key: info.key, title: info.title)
+    }
+
+    /// 没有 `ConversationInfo` 的场合（顶部用量胶囊的回合提示）按对话 key 取同一套匿名编号。
+    static func conversation(key: String, title: String?) -> String {
         isEnabled
-            ? alias(info.key, category: "conversation", english: "Conversation", chinese: "对话")
-            : (info.title ?? tr("Untitled", "（无标题）"))
+            ? alias(key, category: "conversation", english: "Conversation", chinese: "对话")
+            : (title ?? tr("Untitled", "（无标题）"))
     }
 
     static func help(_ text: String) -> String { isEnabled ? tr("Hidden for privacy", "隐私模式下已隐藏") : text }
