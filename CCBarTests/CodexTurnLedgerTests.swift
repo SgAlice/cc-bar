@@ -39,6 +39,8 @@ final class CodexTurnLedgerTests: XCTestCase {
         // 总量 = 输入 + 输出 + 缓存读 + 缓存写，不重复扣减。
         XCTAssertEqual(turn.usage.totalTokens, 3130)
         XCTAssertEqual(turn.usage.costUSD, 2)
+        // 命中率 = 缓存读 / (输入 + 缓存读 + 缓存写)
+        XCTAssertEqual(turn.usage.cacheHitRate, 1900.0 / 3000.0, accuracy: 0.0001)
     }
 
     func testConsecutiveTurnsInSameThreadStaySeparate() {

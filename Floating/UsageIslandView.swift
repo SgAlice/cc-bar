@@ -448,7 +448,7 @@ private struct UsageIslandExpandedView: View {
     let message: String?
     let actions: UsageIslandActions
 
-    static let width: CGFloat = 340
+    static let width: CGFloat = 400
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -518,6 +518,7 @@ private struct UsageIslandExpandedView: View {
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(.tertiary)
                 }
+                UsageIslandMetrics(totals: summary.total, size: 11)
                 Text(tr("API-equivalent estimate, not your subscription bill or remaining quota",
                         "按 API 价格估算，不是订阅扣款，也不是剩余额度"))
                     .font(.system(size: 10))
@@ -551,6 +552,14 @@ private struct UsageIslandExpandedView: View {
                                 .lineLimit(1)
                                 .truncationMode(.tail)
                             Spacer(minLength: 8)
+                            if turn.status != .unattributed, turn.usage.totalTokens > 0 {
+                                Text(tr("Hit \(StatsFormatter.percent(turn.usage.cacheHitRate))",
+                                        "命中 \(StatsFormatter.percent(turn.usage.cacheHitRate))"))
+                                    .font(.system(size: 10))
+                                    .foregroundStyle(.tertiary)
+                                    .monospacedDigit()
+                                    .help(tr("Cache hit rate for this turn", "本轮缓存命中率"))
+                            }
                             UsageIslandTurnAmount(turn: turn)
                         }
                         .font(.system(size: 12))
@@ -581,6 +590,30 @@ private struct UsageIslandExpandedView: View {
             .padding(.horizontal, 14)
             .padding(.top, 8)
             .padding(.bottom, 4)
+    }
+}
+
+/// 缓存命中率与输出速度，口径与统计页相同（`UsageTotals.cacheHitRate`、`StatsFormatter.outputSpeed`，
+/// 含 Pi 近似计时时前缀「≈」并给出说明）。没有可计时的请求时速度显示「—」。
+private struct UsageIslandMetrics: View {
+    let totals: UsageTotals
+    let size: CGFloat
+
+    var body: some View {
+        HStack(spacing: 10) {
+            metric(tr("Hit rate", "命中率"), StatsFormatter.percent(totals.cacheHitRate))
+            metric(tr("Output speed", "输出速度"), StatsFormatter.outputSpeed(totals.timing))
+                .help(StatsFormatter.outputSpeedHelp(totals.timing))
+        }
+        .font(.system(size: size))
+        .lineLimit(1)
+    }
+
+    private func metric(_ label: String, _ value: String) -> some View {
+        HStack(spacing: 3) {
+            Text(label).foregroundStyle(.tertiary)
+            Text(value).foregroundStyle(.secondary).monospacedDigit()
+        }
     }
 }
 
@@ -617,6 +650,8 @@ private struct UsageIslandAppRow: View {
                 breakdown(tr("Cache write", "缓存写"), row.totals.cacheCreationTokens)
             }
             .padding(.leading, 24)
+            UsageIslandMetrics(totals: row.totals, size: 10)
+                .padding(.leading, 24)
         }
     }
 

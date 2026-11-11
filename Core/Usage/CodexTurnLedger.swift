@@ -35,6 +35,13 @@ nonisolated struct CodexTurnUsage: Codable, Equatable, Sendable {
 
     var totalTokens: Int { inputTokens + outputTokens + cacheReadTokens + cacheCreationTokens }
 
+    /// 缓存命中率：缓存读 / (输入 + 缓存读 + 缓存写)，口径同 `UsageTotals.cacheHitRate`。
+    var cacheHitRate: Double {
+        let inputSide = inputTokens + cacheReadTokens + cacheCreationTokens
+        guard inputSide > 0 else { return 0 }
+        return Double(cacheReadTokens) / Double(inputSide)
+    }
+
     mutating func add(_ other: CodexTurnUsage) {
         inputTokens += other.inputTokens
         outputTokens += other.outputTokens
