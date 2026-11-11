@@ -553,8 +553,7 @@ private struct UsageIslandExpandedView: View {
                                 .truncationMode(.tail)
                             Spacer(minLength: 8)
                             if turn.status != .unattributed, turn.usage.totalTokens > 0 {
-                                Text(tr("Hit \(StatsFormatter.percent(turn.usage.cacheHitRate))",
-                                        "命中 \(StatsFormatter.percent(turn.usage.cacheHitRate))"))
+                                Text(UsageIslandFormat.hitRate(turn.usage.cacheHitRate))
                                     .font(.system(size: 10))
                                     .foregroundStyle(.tertiary)
                                     .monospacedDigit()
@@ -593,7 +592,8 @@ private struct UsageIslandExpandedView: View {
     }
 }
 
-/// 缓存命中率与输出速度，口径与统计页相同（`UsageTotals.cacheHitRate`、`StatsFormatter.outputSpeed`，
+/// 缓存命中率与输出速度，口径与统计页相同（`UsageTotals.cacheHitRate`、`StatsFormatter.outputSpeed`；
+/// 命中率在胶囊里保留一位小数，见 `UsageIslandFormat.hitRate`；
 /// 含 Pi 近似计时时前缀「≈」并给出说明）。没有可计时的请求时速度显示「—」。
 private struct UsageIslandMetrics: View {
     let totals: UsageTotals
@@ -601,7 +601,7 @@ private struct UsageIslandMetrics: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            metric(tr("Hit rate", "命中率"), StatsFormatter.percent(totals.cacheHitRate))
+            metric(tr("Hit rate", "命中率"), UsageIslandFormat.hitRate(totals.cacheHitRate))
             metric(tr("Output speed", "输出速度"), StatsFormatter.outputSpeed(totals.timing))
                 .help(StatsFormatter.outputSpeedHelp(totals.timing))
         }

@@ -23,6 +23,15 @@ final class UsageIslandTests: XCTestCase {
         XCTAssertEqual(UsageIslandFormat.tokens(1_234_000_000), "1,234M")
     }
 
+    func testHitRateKeepsOneDecimalWithoutRoundingUpToFull() {
+        XCTAssertEqual(UsageIslandFormat.hitRate(0), "0.0%")
+        XCTAssertEqual(UsageIslandFormat.hitRate(0.9963), "99.6%")
+        XCTAssertEqual(UsageIslandFormat.hitRate(0.99996), "99.9%", "没到 100% 不进位成 100%")
+        XCTAssertEqual(UsageIslandFormat.hitRate(1), "100%")
+        XCTAssertEqual(UsageIslandFormat.hitRate(0.0004), "<0.1%")
+        XCTAssertEqual(UsageIslandFormat.hitRate(0.5), "50.0%")
+    }
+
     // MARK: - 今日汇总
 
     func testTodaySummaryUsesVisibleAppsAndTodayOnly() {

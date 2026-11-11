@@ -26,6 +26,16 @@ nonisolated enum UsageIslandFormat {
         return "\(sign)$\(body)"
     }
 
+    /// 缓存命中率，保留一位小数。没到 100% 时最多显示 99.9%（不让 99.96% 进位成看似全部命中的 100.0%），
+    /// 非零但不足 0.1% 显示 <0.1%。
+    static func hitRate(_ ratio: Double) -> String {
+        guard ratio.isFinite, ratio > 0 else { return "0.0%" }
+        if ratio >= 1 { return "100%" }
+        let tenths = (ratio * 1000).rounded()
+        if tenths < 1 { return "<0.1%" }
+        return String(format: "%.1f%%", min(tenths, 999) / 10)
+    }
+
     static func tokens(_ count: Int, signed: Bool = false) -> String {
         let sign = signed ? "+" : ""
         if count <= 0 { return "\(sign)0M" }
