@@ -1,4 +1,5 @@
 import AppKit
+import SwiftUI
 import Foundation
 import Observation
 
@@ -155,6 +156,16 @@ nonisolated enum UsageIslandLayout {
         guard screenFrame.width > 0 else { return 0 }
         return min(0.5, max(-0.5, Double((centerX - screenFrame.midX) / screenFrame.width)))
     }
+}
+
+// MARK: - 动效
+
+/// 岛形尺寸变化的弹簧曲线：变大略带回弹，变小不回弹。悬停展开 / 收起与回合提示弹出 / 收回共用。
+enum UsageIslandMotion {
+    static let grow = Animation.spring(response: 0.42, dampingFraction: 0.74)
+    static let shrink = Animation.spring(response: 0.3, dampingFraction: 0.95)
+    /// 覆盖两种弹簧的稳定时间。
+    static let settleDuration: Duration = .milliseconds(700)
 }
 
 // MARK: - 界面状态

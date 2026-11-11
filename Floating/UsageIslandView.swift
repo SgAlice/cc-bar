@@ -95,6 +95,9 @@ struct UsageIslandRootView: View {
                     .truncationMode(.tail)
                     .frame(maxWidth: 150, alignment: .leading)
             }
+            // 换到下一条提示时按新内容淡入淡出，而不是原地改字。
+            .id(notice.id)
+            .transition(.opacity)
         } else {
             HStack(spacing: 5) {
                 Text(tr("Today", "今日")).foregroundStyle(.secondary)
@@ -122,6 +125,8 @@ struct UsageIslandRootView: View {
                     .help(tr("Show all", "展开查看"))
                 }
             }
+            .id(notice.id)
+            .transition(.opacity)
         } else {
             Text(UsageIslandFormat.tokens(summary.total.totalTokens))
                 .monospacedDigit()
@@ -230,6 +235,7 @@ private struct UsageIslandBar<Left: View, Right: View>: View {
     @ViewBuilder let left: () -> Left
     @ViewBuilder let right: () -> Right
     @State private var wingWidth: CGFloat = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         HStack(spacing: 0) {
@@ -256,7 +262,13 @@ private struct UsageIslandBar<Left: View, Right: View>: View {
         .lineLimit(1)
         .frame(height: geometry.barHeight)
         .onPreferenceChange(UsageIslandWingKey.self) { width in
-            if abs(width - wingWidth) > 0.5 { wingWidth = width }
+            guard abs(width - wingWidth) > 0.5 else { return }
+            // 有刘海时两翼按较宽的一侧等宽；内容变化后跟着弹簧过渡，不在动画中途跳宽。
+            if reduceMotion || wingWidth == 0 {
+                wingWidth = width
+            } else {
+                withAnimation(UsageIslandMotion.grow) { wingWidth = width }
+            }
         }
     }
 

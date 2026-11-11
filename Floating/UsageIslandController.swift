@@ -216,22 +216,27 @@ final class UsageIslandController: NSObject {
         layout()
     }
 
-    /// 展开用略带回弹的弹簧，收起用不回弹的快速弹簧；系统开启「减弱动态效果」时直接切换。
-    private static let expandAnimation = Animation.spring(response: 0.42, dampingFraction: 0.74)
-    private static let collapseAnimation = Animation.spring(response: 0.3, dampingFraction: 0.95)
-    /// 覆盖两种弹簧的稳定时间。
-    private static let transitionDuration: Duration = .milliseconds(700)
+    /// 变大用略带回弹的弹簧，变小用不回弹的快速弹簧；系统开启「减弱动态效果」时直接切换。
+    private static let expandAnimation = UsageIslandMotion.grow
+    private static let collapseAnimation = UsageIslandMotion.shrink
+    private static let transitionDuration = UsageIslandMotion.settleDuration
 
     private func setMode(_ mode: UsageIslandModel.Mode) {
         guard model.mode != mode else { return }
+        animate(growing: mode == .expanded) { model.mode = mode }
+    }
+
+    /// 岛形内容的所有变化（悬停展开 / 收起、回合提示弹出 / 切换 / 收回、临时提示）都走这里：
+    /// 变大用略带回弹的弹簧，变小用不回弹的弹簧；过渡期间窗口画布保持前后尺寸的并集。
+    private func animate(growing: Bool, _ change: () -> Void) {
         guard !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else {
-            model.mode = mode
+            change()
             return
         }
         isTransitioning = true
         transitionTask?.cancel()
-        withAnimation(mode == .expanded ? Self.expandAnimation : Self.collapseAnimation) {
-            model.mode = mode
+        withAnimation(growing ? Self.expandAnimation : Self.collapseAnimation) {
+            change()
         }
         transitionTask = Task { [weak self] in
             try? await Task.sleep(for: Self.transitionDuration)
@@ -333,10 +338,12 @@ final class UsageIslandController: NSObject {
     private func expand() {
         hoverTask?.cancel()
         dismissTask?.cancel()
-        // 展开后排队的提示都在「最近的 Codex 回合」里，不再逐条弹出。
-        model.queue.removeAll()
-        model.skippedNotices = 0
-        setMode(.expanded)
+        // 展开后排队的提示都在「最近的回合」里，不再逐条弹出。
+        animate(growing: true) {
+            model.queue.removeAll()
+            model.skippedNotices = 0
+            model.mode = .expanded
+        }
         updateVisibility()
     }
 
@@ -359,7 +366,7 @@ final class UsageIslandController: NSObject {
             return
         }
         let wasEmpty = model.queue.isEmpty
-        model.queue.append(contentsOf: notices)
+        animate(growing: true) { model.queue.append(contentsOf: notices) }
         updateVisibility()
         if wasEmpty { scheduleDismiss(after: Self.noticeDuration) }
     }
@@ -376,14 +383,17 @@ final class UsageIslandController: NSObject {
 
     private func advanceQueue() {
         guard !model.queue.isEmpty else { return }
-        if model.queue.count > Self.maxQueuedNotices {
-            // 长队列：直接跳到最新一条，并带上「另有 N 轮」，其余在展开面板里看。
-            model.skippedNotices += model.queue.count - 2
-            model.queue = [model.queue[model.queue.count - 1]]
-        } else {
-            model.queue.removeFirst()
+        // 最后一条收回时岛形变小；切到下一条时宽度可能变大也可能变小，按变大处理（略带回弹）。
+        animate(growing: model.queue.count > 1) {
+            if model.queue.count > Self.maxQueuedNotices {
+                // 长队列：直接跳到最新一条，并带上「另有 N 轮」，其余在展开面板里看。
+                model.skippedNotices += model.queue.count - 2
+                model.queue = [model.queue[model.queue.count - 1]]
+            } else {
+                model.queue.removeFirst()
+            }
+            if model.queue.isEmpty { model.skippedNotices = 0 }
         }
-        if model.queue.isEmpty { model.skippedNotices = 0 }
         updateVisibility()
         if !model.queue.isEmpty { scheduleDismiss(after: Self.noticeDuration) }
     }
@@ -464,13 +474,13 @@ final class UsageIslandController: NSObject {
     }
 
     private func showMessage(_ text: String) {
-        model.message = text
+        animate(growing: true) { model.message = text }
         updateVisibility()
         messageTask?.cancel()
         messageTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(3))
             guard !Task.isCancelled, let self else { return }
-            self.model.message = nil
+            self.animate(growing: false) { self.model.message = nil }
             self.updateVisibility()
         }
     }
