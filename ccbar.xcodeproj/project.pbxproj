@@ -26,6 +26,8 @@
 		49C1BE16000000000001AAAA /* DshContributionCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49C1BE12000000000001AAAA /* DshContributionCache.swift */; };
 		49C2AA02000000000001AAAA /* UsageSnapshotStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49C2AA01000000000001AAAA /* UsageSnapshotStore.swift */; };
 		49C2AA04000000000001AAAA /* LegacyUsageHistory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49C2AA03000000000001AAAA /* LegacyUsageHistory.swift */; };
+		49C2B002000000000001AAAA /* AtomicWriteLeftoverCleaner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49C2B001000000000001AAAA /* AtomicWriteLeftoverCleaner.swift */; };
+		49C2B004000000000001AAAA /* AtomicWriteLeftoverCleanerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49C2B003000000000001AAAA /* AtomicWriteLeftoverCleanerTests.swift */; };
 		49C2AA06000000000001AAAA /* UsageHistoryConsistency.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49C2AA05000000000001AAAA /* UsageHistoryConsistency.swift */; };
 		49C2AA08000000000001AAAA /* UsageSnapshotStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49C2AA07000000000001AAAA /* UsageSnapshotStoreTests.swift */; };
 		49C2AA0A000000000001AAAA /* UsageHistoryRecoveryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49C2AA09000000000001AAAA /* UsageHistoryRecoveryTests.swift */; };
@@ -119,6 +121,9 @@
 		4ACE0001000000000001AABB /* CodexTurnLedger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4ACE0001000000000001AAAA /* CodexTurnLedger.swift */; };
 		49C1BA11000000000001AABB /* CycleUsage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49C1BA11000000000001AAAA /* CycleUsage.swift */; };
 		49C1B157000000000001AABB /* PricingCatalogModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49C1B157000000000001AAAA /* PricingCatalogModels.swift */; };
+		49C2B102000000000001AAAA /* PricingRules.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49C2B101000000000001AAAA /* PricingRules.swift */; };
+		49C2B104000000000001AAAA /* PricingRulesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49C2B103000000000001AAAA /* PricingRulesStore.swift */; };
+		49C2B106000000000001AAAA /* pricing-rules.json in Resources */ = {isa = PBXBuildFile; fileRef = 49C2B105000000000001AAAA /* pricing-rules.json */; };
 		49C1B158000000000001AABB /* LiteLLMPricingDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49C1B158000000000001AAAA /* LiteLLMPricingDecoder.swift */; };
 		49C1B159000000000001AABB /* ModelsDevPricingDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49C1B159000000000001AAAA /* ModelsDevPricingDecoder.swift */; };
 		49C1B15A000000000001AABB /* PricingCatalogStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49C1B15A000000000001AAAA /* PricingCatalogStore.swift */; };
@@ -149,6 +154,7 @@
 		49C1B195000000000001AABB /* CodexResetCreditsDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49C1B195000000000001AAAA /* CodexResetCreditsDetailView.swift */; };
 		49C1B196000000000001AABB /* ImportedUsageBackfill.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49C1B196000000000001AAAA /* ImportedUsageBackfill.swift */; };
 		49C1B300000000000001AABB /* QuotaParsingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49C1B300000000000001AAAA /* QuotaParsingTests.swift */; };
+		49C2B108000000000001AAAA /* PricingRulesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49C2B107000000000001AAAA /* PricingRulesTests.swift */; };
 		49C1BC12000000000001AABB /* CursorAuthTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49C1BC12000000000001AAAA /* CursorAuthTests.swift */; };
 		49C1BC15000000000001AABB /* CursorUsageFetcherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49C1BC15000000000001AAAA /* CursorUsageFetcherTests.swift */; };
 		49C1B31000000000000FAABB /* PiJSONLScannerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49C1B31000000000000FAAAA /* PiJSONLScannerTests.swift */; };
@@ -269,6 +275,8 @@
 		49C1BE12000000000001AAAA /* DshContributionCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DshContributionCache.swift; sourceTree = "<group>"; };
 		49C2AA01000000000001AAAA /* UsageSnapshotStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageSnapshotStore.swift; sourceTree = "<group>"; };
 		49C2AA03000000000001AAAA /* LegacyUsageHistory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyUsageHistory.swift; sourceTree = "<group>"; };
+		49C2B001000000000001AAAA /* AtomicWriteLeftoverCleaner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AtomicWriteLeftoverCleaner.swift; sourceTree = "<group>"; };
+		49C2B003000000000001AAAA /* AtomicWriteLeftoverCleanerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AtomicWriteLeftoverCleanerTests.swift; sourceTree = "<group>"; };
 		49C2AA05000000000001AAAA /* UsageHistoryConsistency.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageHistoryConsistency.swift; sourceTree = "<group>"; };
 		49C2AA07000000000001AAAA /* UsageSnapshotStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageSnapshotStoreTests.swift; sourceTree = "<group>"; };
 		49C2AA09000000000001AAAA /* UsageHistoryRecoveryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageHistoryRecoveryTests.swift; sourceTree = "<group>"; };
@@ -291,6 +299,9 @@
 		4ACE0001000000000001AAAA /* CodexTurnLedger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexTurnLedger.swift; sourceTree = "<group>"; };
 		49C1BA11000000000001AAAA /* CycleUsage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CycleUsage.swift; sourceTree = "<group>"; };
 		49C1B157000000000001AAAA /* PricingCatalogModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PricingCatalogModels.swift; sourceTree = "<group>"; };
+		49C2B101000000000001AAAA /* PricingRules.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PricingRules.swift; sourceTree = "<group>"; };
+		49C2B103000000000001AAAA /* PricingRulesStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PricingRulesStore.swift; sourceTree = "<group>"; };
+		49C2B105000000000001AAAA /* pricing-rules.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "pricing-rules.json"; sourceTree = "<group>"; };
 		49C1B158000000000001AAAA /* LiteLLMPricingDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiteLLMPricingDecoder.swift; sourceTree = "<group>"; };
 		49C1B159000000000001AAAA /* ModelsDevPricingDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelsDevPricingDecoder.swift; sourceTree = "<group>"; };
 		49C1B15A000000000001AAAA /* PricingCatalogStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PricingCatalogStore.swift; sourceTree = "<group>"; };
@@ -320,6 +331,7 @@
 		49C1B195000000000001AAAA /* CodexResetCreditsDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexResetCreditsDetailView.swift; sourceTree = "<group>"; };
 		49C1B196000000000001AAAA /* ImportedUsageBackfill.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportedUsageBackfill.swift; sourceTree = "<group>"; };
 		49C1B300000000000001AAAA /* QuotaParsingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuotaParsingTests.swift; sourceTree = "<group>"; };
+		49C2B107000000000001AAAA /* PricingRulesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PricingRulesTests.swift; sourceTree = "<group>"; };
 		49C1BC12000000000001AAAA /* CursorAuthTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CursorAuthTests.swift; sourceTree = "<group>"; };
 		49C1BC15000000000001AAAA /* CursorUsageFetcherTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CursorUsageFetcherTests.swift; sourceTree = "<group>"; };
 		49C1B31000000000000FAAAA /* PiJSONLScannerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PiJSONLScannerTests.swift; sourceTree = "<group>"; };
@@ -425,6 +437,7 @@
 			children = (
 				4931AC522FC02A4200EE598C /* Assets.xcassets */,
 				49C1B142000000000001AAAA /* Logos */,
+				49C2B105000000000001AAAA /* pricing-rules.json */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -476,6 +489,7 @@
 				49C1BE12000000000001AAAA /* DshContributionCache.swift */,
 				49C2AA01000000000001AAAA /* UsageSnapshotStore.swift */,
 				49C2AA03000000000001AAAA /* LegacyUsageHistory.swift */,
+				49C2B001000000000001AAAA /* AtomicWriteLeftoverCleaner.swift */,
 				49C1B168000000000001AAAA /* ConversationRollupCache.swift */,
 				49C1B196000000000001AAAA /* ImportedUsageBackfill.swift */,
 				49C1BC13000000000001AAAA /* CursorUsageCache.swift */,
@@ -533,6 +547,8 @@
 			isa = PBXGroup;
 			children = (
 				49C1B157000000000001AAAA /* PricingCatalogModels.swift */,
+				49C2B101000000000001AAAA /* PricingRules.swift */,
+				49C2B103000000000001AAAA /* PricingRulesStore.swift */,
 				49C1B158000000000001AAAA /* LiteLLMPricingDecoder.swift */,
 				49C1B159000000000001AAAA /* ModelsDevPricingDecoder.swift */,
 				49C1B15A000000000001AAAA /* PricingCatalogStore.swift */,
@@ -618,6 +634,7 @@
 				C1A0DE01000000000001AAAA /* ClaudeAuthTests.swift */,
 				49C2AD06000000000001AAAA /* QuotaAlertTests.swift */,
 				49C1B300000000000001AAAA /* QuotaParsingTests.swift */,
+				49C2B107000000000001AAAA /* PricingRulesTests.swift */,
 				49C1BC12000000000001AAAA /* CursorAuthTests.swift */,
 				49C1BC15000000000001AAAA /* CursorUsageFetcherTests.swift */,
 				49C1BF02000000000001AAAA /* QuotaRefreshPlanTests.swift */,
@@ -646,6 +663,7 @@
 				49C1BB03000000000001AAAA /* ProjectUsageTests.swift */,
 				49C1BF09000000000001AAAA /* UpdateCheckerTests.swift */,
 				49C2AA07000000000001AAAA /* UsageSnapshotStoreTests.swift */,
+				49C2B003000000000001AAAA /* AtomicWriteLeftoverCleanerTests.swift */,
 				49C2AA09000000000001AAAA /* UsageHistoryRecoveryTests.swift */,
 				49C2AB03000000000001AAAA /* CodexModelIdentityMigrationTests.swift */,
 				49C2AA0B000000000001AAAA /* UsageSafeRebuildTests.swift */,
@@ -776,6 +794,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				4931AC592FC02A4200EE598C /* Assets.xcassets in Resources */,
+				49C2B106000000000001AAAA /* pricing-rules.json in Resources */,
 				49C1B140000000000001AABB /* codex.svg in Resources */,
 				49C1B141000000000001AABB /* claude.svg in Resources */,
 				49C1B143000000000001AABB /* antigravity.svg in Resources */,
@@ -874,6 +893,7 @@
 				49C1BE16000000000001AAAA /* DshContributionCache.swift in Sources */,
 				49C2AA02000000000001AAAA /* UsageSnapshotStore.swift in Sources */,
 				49C2AA04000000000001AAAA /* LegacyUsageHistory.swift in Sources */,
+				49C2B002000000000001AAAA /* AtomicWriteLeftoverCleaner.swift in Sources */,
 				49C1B155000000000001AABB /* UsageAggregator.swift in Sources */,
 				49C1B16A000000000001AABB /* ModelProvider.swift in Sources */,
 				49C1B156000000000001AABB /* UsageService.swift in Sources */,
@@ -884,6 +904,8 @@
 				4ACE0001000000000001AABB /* CodexTurnLedger.swift in Sources */,
 				49C1BA11000000000001AABB /* CycleUsage.swift in Sources */,
 				49C1B157000000000001AABB /* PricingCatalogModels.swift in Sources */,
+				49C2B102000000000001AAAA /* PricingRules.swift in Sources */,
+				49C2B104000000000001AAAA /* PricingRulesStore.swift in Sources */,
 				49C1B158000000000001AABB /* LiteLLMPricingDecoder.swift in Sources */,
 				49C1B159000000000001AABB /* ModelsDevPricingDecoder.swift in Sources */,
 				49C1B15A000000000001AABB /* PricingCatalogStore.swift in Sources */,
@@ -920,6 +942,7 @@
 			files = (
 				49C2AD06000000000001AABB /* QuotaAlertTests.swift in Sources */,
 				49C1B300000000000001AABB /* QuotaParsingTests.swift in Sources */,
+				49C2B108000000000001AAAA /* PricingRulesTests.swift in Sources */,
 				C1A0DE02000000000001AAAA /* ClaudeAuthTests.swift in Sources */,
 				49C1BC12000000000001AABB /* CursorAuthTests.swift in Sources */,
 				49C1BC15000000000001AABB /* CursorUsageFetcherTests.swift in Sources */,
@@ -945,6 +968,7 @@
 				49C1BE19000000000001AAAA /* DshContributionTests.swift in Sources */,
 				49C1BE1F000000000001AAAA /* DshAggregationRegressionTests.swift in Sources */,
 				49C2AA08000000000001AAAA /* UsageSnapshotStoreTests.swift in Sources */,
+				49C2B004000000000001AAAA /* AtomicWriteLeftoverCleanerTests.swift in Sources */,
 				49C2AA0A000000000001AAAA /* UsageHistoryRecoveryTests.swift in Sources */,
 				49C2AB04000000000001AAAA /* CodexModelIdentityMigrationTests.swift in Sources */,
 				49C2AA0C000000000001AAAA /* UsageSafeRebuildTests.swift in Sources */,
@@ -1111,7 +1135,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.1.40;
+				MARKETING_VERSION = 1.1.44;
 				PRODUCT_BUNDLE_IDENTIFIER = com.nanvon.ccbar;
 				PRODUCT_NAME = CCBar;
 				REGISTER_APP_GROUPS = YES;
@@ -1145,7 +1169,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.1.40;
+				MARKETING_VERSION = 1.1.44;
 				PRODUCT_BUNDLE_IDENTIFIER = com.nanvon.ccbar;
 				PRODUCT_NAME = CCBar;
 				REGISTER_APP_GROUPS = YES;
