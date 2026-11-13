@@ -181,12 +181,12 @@ struct UsageIslandRootView: View {
             }
     }
 
-    /// 黑底上中性的石墨灰看不清，正常档用白色；低于 20% 橙、用完红，与 `statusColor` 的分档一致。
+    /// 黑底上中性的石墨灰看不清，正常档用顶栏文字色；低于 20% 橙、用完红，与 `statusColor` 的分档一致。
     private static func quotaColor(_ remaining: Double?) -> Color {
-        guard let remaining else { return .white }
+        guard let remaining else { return UsageIslandBarStyle.text }
         if remaining <= 0 { return .red }
         if remaining < 20 { return .orange }
-        return .white
+        return UsageIslandBarStyle.text
     }
 
     private func barTapped() {
@@ -290,6 +290,11 @@ private extension View {
 
 // MARK: - 顶栏行
 
+/// 顶栏行文字色：纯白在纯黑岛形上太刺眼，降到白色 0.53；secondary / tertiary 按此层级再变暗。
+private enum UsageIslandBarStyle {
+    static let text = Color.white.opacity(0.53)
+}
+
 /// 与菜单栏同高的一行：左翼 + 刘海（或「·」）+ 右翼，左右边距相同。
 /// 有刘海时两翼按较宽的一侧等宽（刘海才能居中），文字在各自一翼内居中；无刘海时按实际宽度排列，整体居中。
 private struct UsageIslandBar<Left: View, Right: View>: View {
@@ -320,7 +325,7 @@ private struct UsageIslandBar<Left: View, Right: View>: View {
                 .padding(.trailing, 12)
         }
         .font(.system(size: geometry.barHeight > 26 ? 13 : 12, weight: .semibold))
-        .foregroundStyle(.white)
+        .foregroundStyle(UsageIslandBarStyle.text)
         .lineLimit(1)
         .frame(height: geometry.barHeight)
         .onPreferenceChange(UsageIslandWingKey.self) { width in
