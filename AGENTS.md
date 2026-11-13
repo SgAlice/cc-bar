@@ -88,6 +88,15 @@ xcodebuild -project ccbar.xcodeproj -scheme ccbar -configuration Debug -destinat
 
 这属于「耗时命令」，按上面协作规则，运行前要先说明原因并征得同意。看到 `** BUILD SUCCEEDED **` 即代表本次改动没有语法/类型错误；不代表功能正确，功能验收仍需按「常用验证方式」走手动验收。
 
+### 本 fork 约定：构建后替换已安装的 CCBar
+
+本仓库是个人 fork（`origin` = SgAlice/cc-bar），以下约定只适用于本 fork：
+
+- **构建成功后，用构建出的 App 替换 `/Applications/CCBar.app`。** 本条优先于下面「打包分发」中「不要动 `/Applications`」的说明（那条针对 `scripts/build.sh` 打包产物）。
+- 本机没有上游团队 `324F7B2X9T` 的 Mac Development 证书，直接 build 会签名失败；在上面的命令后追加 `CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= CODE_SIGN_STYLE=Manual` 用 ad-hoc 签名，不要改工程文件里的签名配置。
+- 产物在 `~/Library/Developer/Xcode/DerivedData/ccbar-*/Build/Products/Debug/CCBar.app`。
+- 替换前先退出正在运行的 CCBar；用 `ditto` 复制，不要用 `cp`。
+
 ## 打包分发
 
 打包的唯一入口是仓库自带的脚本，**不要用 Xcode 的 Archive / Export（含 Developer ID 导出）分发**，也不要手动 `codesign`/`ditto` 现拼流程：
